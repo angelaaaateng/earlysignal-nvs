@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+# Builds the installable web app and publishes it to the gh-pages branch.
+# One-time setup: Settings → Pages → Build and deployment → Source:
+# "Deploy from a branch", Branch: gh-pages / (root).
+on:
+  push:
+    branches: [main, claude/earlysignal-app]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --ci
+      - name: Build for /${{ github.event.repository.name }}
+        run: node scripts/build-web.mjs
+        env:
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
+      - name: Publish to gh-pages
+        run: |
+          cd dist
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898299+github-actions[bot]@users.noreply.github.com" commit -q -m "Deploy ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages

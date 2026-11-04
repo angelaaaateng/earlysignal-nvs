@@ -6,11 +6,13 @@
  *   names change on every build, so they can never go stale.
  * - Never caches API or cross-origin requests.
  *
- * __BUILD_ID__ and __PRECACHE__ are filled in at build time
+ * __BUILD_ID__, __BASE__ and __PRECACHE__ are filled in at build time
  * (scripts/postbuild-web.mjs): each deploy gets its own caches, precaches
  * every route so the app works offline, and deletes old caches on activate.
  */
 const BUILD = '__BUILD_ID__';
+/** Sub-path the app is hosted under ('' at the site root). */
+const BASE = '__BASE__';
 const SHELL = `shell-${BUILD}`;
 const STATIC = `static-${BUILD}`;
 /** Every build file (route code, fonts, icons), injected at build time. */
@@ -19,7 +21,7 @@ const PRECACHE = '__PRECACHE__';
 self.addEventListener('install', (event) => {
   event.waitUntil(
     Promise.all([
-      caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json'])),
+      caches.open(SHELL).then((c) => c.addAll([`${BASE}/`, `${BASE}/manifest.json`])),
       caches.open(STATIC).then((c) => c.addAll(Array.isArray(PRECACHE) ? PRECACHE : [])),
     ]).then(() => self.skipWaiting()),
   );
@@ -38,24 +40,29 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  if (url.origin !== self.location.origin || url.pathname.startsWith(`${BASE}/api/`)) return;
+  const path = url.pathname.slice(BASE.length);
 
   // App navigations: network first, cached shell when offline (SPA routes all serve index.html).
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(SHELL).then((c) => c.put('/', copy));
+          // Only a real 200 refreshes the cached shell. (GitHub Pages answers deep
+          // links with 404.html, which is the same app shell, but with status 404.)
+          if (res.ok && new URL(res.url).pathname === `${BASE}/`) {
+            const copy = res.clone();
+            caches.open(SHELL).then((c) => c.put(`${BASE}/`, copy));
+          }
           return res;
         })
-        .catch(() => caches.match('/')),
+        .catch(() => caches.match(`${BASE}/`)),
     );
     return;
   }
 
   // Immutable build output and static assets: cache first.
-  if (url.pathname.startsWith('/_expo/') || url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
+  if (path.startsWith('/_expo/') || path.startsWith('/assets/') || path.startsWith('/icons/')) {
     event.respondWith(
       caches.match(req).then(
         (hit) =>

@@ -44,7 +44,8 @@
     "test:e2e": "playwright test",
     "walkthrough": "node scripts/walkthrough.mjs",
     "icons": "node scripts/make-icons.mjs",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "deploy:pages": "node scripts/deploy-gh-pages.mjs"
   },
   "private": true,
   "jest": {

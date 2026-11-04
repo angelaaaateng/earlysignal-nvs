@@ -8,9 +8,10 @@ import { log } from '@/observability/logger';
 export function registerServiceWorker() {
   if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
   if (process.env.NODE_ENV !== 'production') return;
+  const base = process.env.EXPO_PUBLIC_BASE_URL ?? '';
   const register = () =>
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(`${base}/sw.js`, { scope: `${base}/` })
       .then((reg) => {
         log.info('pwa.sw.registered', { scope: reg.scope });
         // When a new version finishes installing, tell the user on next launch.
