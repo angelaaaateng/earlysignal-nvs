@@ -58,7 +58,7 @@ function Sprint({ q, step, studentId }: { q: QuestView; step: StepView; studentI
   const status = left === 0 ? 'Time’s up. Pip calls a break.' : paused ? 'Paused. Take a breath.' : 'Pip is studying with you';
 
   const finish = () => {
-    act((db, now) => toggleQuestStep(db, studentId, step.id, now));
+    act('focus.step.finish', (db, now) => toggleQuestStep(db, studentId, step.id, now), { stepId: step.id });
     router.replace('/student');
   };
 

@@ -46,7 +46,7 @@ export default function AddChild() {
     setError('');
     if (requiresParentalConsent(birth, today)) return setStep('consent');
     try {
-      act(create());
+      act('student.account.create', create());
       setStep('done');
     } catch (e) {
       setError((e as Error).message);
@@ -56,7 +56,7 @@ export default function AddChild() {
   const onConsent = () => {
     setError('');
     try {
-      act((d, t) => {
+      act('student.account.create_with_consent', (d, t) => {
         const r = recordParentalConsent(d, me.id, { familyId: family.id, childFirstName: first, childBirthDate: birth, method, agreedToNotice: agreed }, t);
         return create(r.consent.id)(r.db, t);
       });
@@ -103,7 +103,7 @@ export default function AddChild() {
             {METHODS.map((m) => {
               const on = m.id === method;
               return (
-                <Pressable key={m.id} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => setMethod(m.id)} style={[styles.opt, { borderColor: on ? C.greenParent : C.lineParent }]}>
+                <Pressable key={m.id} accessibilityRole="radio" accessibilityState={{ checked: on }} aria-checked={on} onPress={() => setMethod(m.id)} style={[styles.opt, { borderColor: on ? C.greenParent : C.lineParent }]}>
                   <View style={[styles.radio, { borderColor: on ? C.greenParent : C.lineParent }]}>
                     <View style={[styles.dot, { backgroundColor: on ? C.greenParent : 'transparent' }]} />
                   </View>
@@ -116,7 +116,7 @@ export default function AddChild() {
             })}
           </View>
 
-          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} onPress={() => setAgreed((a) => !a)} style={styles.agree}>
+          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} aria-checked={agreed} onPress={() => setAgreed((a) => !a)} style={styles.agree}>
             <View style={[styles.box, agreed ? { backgroundColor: C.greenParent, borderColor: C.greenParent } : null]}>
               {agreed && <Text style={[body(800), { color: C.white, fontSize: 14 }]}>✓</Text>}
             </View>

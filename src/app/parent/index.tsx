@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useApp } from '@/data/AppStore';
+import { useApp, useAuditView } from '@/data/AppStore';
 import { sendCheer } from '@/domain/mutations';
 import { parentWeeklySummary } from '@/domain/parent';
 import { useParent } from '@/ui/parent';
@@ -15,6 +15,7 @@ export default function ParentSummary() {
   const { db, now, act } = useApp();
   const [sent, setSent] = useState(false);
   const s = useMemo(() => (studentId ? parentWeeklySummary(db, me.id, studentId, now) : undefined), [db, me.id, studentId, now]);
+  useAuditView('parent.summary.view', studentId);
 
   return (
     <Screen bg={C.paperParent} footer={<ParentNav active="Summary" />} contentStyle={{ paddingTop: 26, gap: 12 }}>
@@ -26,7 +27,7 @@ export default function ParentSummary() {
               accessibilityRole="button"
               disabled={sent}
               onPress={() => {
-                act((d, t) => sendCheer(d, me.id, s.studentId, t));
+                act('cheer.send', (d, t) => sendCheer(d, me.id, s.studentId, t));
                 setSent(true);
               }}
               style={[styles.cheer, { backgroundColor: sent ? C.greenSoft : C.greenParent }]}

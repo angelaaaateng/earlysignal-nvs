@@ -37,6 +37,7 @@ export default function ParentHelp() {
               key={o.id}
               accessibilityRole="radio"
               accessibilityState={{ checked: on }}
+              aria-checked={on}
               onPress={() => {
                 setPicked(i);
                 setCopied(false);

@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
     "@expo-google-fonts/nunito-sans": "^0.4.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~58.0.23",
     "expo-clipboard": "~58.0.4",
     "expo-constants": "~58.0.15",
@@ -21,6 +22,7 @@
     "react-native-web": "^0.21.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/jest": "30.0.0",
     "@types/react": "~19.3.0",
     "eslint": "^9.0.0",
@@ -36,13 +38,20 @@
     "web": "expo start --web",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:web": "node scripts/build-web.mjs",
+    "serve:web": "node scripts/serve.mjs dist 8080",
+    "test:e2e": "playwright test",
+    "walkthrough": "node scripts/walkthrough.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "check": "npm run typecheck && npm run lint && npm test"
   },
   "private": true,
   "jest": {
     "preset": "jest-expo",
     "testPathIgnorePatterns": [
-      "/node_modules/"
+      "/node_modules/",
+      "/e2e/"
     ]
   }
 }

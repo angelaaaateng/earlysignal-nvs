@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
-import { useApp, useViewer } from '@/data/AppStore';
+import { useApp, useAuditView, useViewer } from '@/data/AppStore';
 import { previewOwnParentSummary } from '@/domain/parent';
 import { BackButton, goBack, Screen } from '@/ui/Screen';
 import { useStudentHome } from '@/ui/student';
@@ -13,6 +13,7 @@ export default function Preview() {
   const { db, now } = useApp();
   const h = useStudentHome();
   const s = useMemo(() => previewOwnParentSummary(db, me.id, now), [db, me.id, now]);
+  useAuditView('student.summary_preview.view', me.id);
   return (
     <Screen bg={C.paperParent} contentStyle={{ paddingTop: 24, gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

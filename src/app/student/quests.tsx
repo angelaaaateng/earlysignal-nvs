@@ -14,7 +14,7 @@ export default function Quests() {
   const h = useStudentHome();
   const { act } = useApp();
   const [featured, ...rest] = h.open;
-  const toggle = (stepId: string) => act((db, now) => toggleQuestStep(db, h.studentId, stepId, now));
+  const toggle = (stepId: string) => act('quest.step.toggle', (db, now) => toggleQuestStep(db, h.studentId, stepId, now), { stepId });
 
   return (
     <Screen bg={C.paper} footer={<StudentNav active="Quests" />} contentStyle={{ paddingTop: 28, gap: 14 }}>
@@ -84,6 +84,7 @@ function Featured({ q, reason, onToggle }: { q: QuestView; reason?: string; onTo
             key={s.id}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: s.done }}
+            aria-checked={s.done}
             accessibilityLabel={`${s.label}, ${s.timeLabel}`}
             onPress={() => onToggle(s.id)}
             style={styles.step}

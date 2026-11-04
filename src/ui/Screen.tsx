@@ -77,6 +77,7 @@ export function BottomNav({
             key={it.label}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
+            aria-selected={on}
             onPress={() => !on && router.replace(it.href)}
             style={styles.navItem}
           >

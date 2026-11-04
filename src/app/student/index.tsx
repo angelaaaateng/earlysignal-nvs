@@ -82,7 +82,7 @@ export default function Burrow() {
             key={q.id}
             q={q}
             active={q.id === h.activeQuestId}
-            onToggle={() => act((db, now) => toggleQuestStep(db, h.studentId, q.steps[0].id, now))}
+            onToggle={() => act('quest.step.toggle', (db, now) => toggleQuestStep(db, h.studentId, q.steps[0].id, now), { stepId: q.steps[0].id })}
           />
         ))}
       </View>

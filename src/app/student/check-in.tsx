@@ -21,7 +21,7 @@ export default function CheckInScreen() {
 
   const submit = () => {
     if (!picked) return;
-    act((d, t) => submitCheckIn(d, h.studentId, picked, note, t));
+    act('checkin.submit', (d, t) => submitCheckIn(d, h.studentId, picked, note, t), { score: picked, hasNote: note.trim().length > 0 });
     router.replace('/student/quests');
   };
 
@@ -53,6 +53,7 @@ export default function CheckInScreen() {
               key={l.n}
               accessibilityRole="radio"
               accessibilityState={{ checked: on }}
+              aria-checked={on}
               accessibilityLabel={`${l.n}, ${l.label}`}
               onPress={() => setPicked(l.n)}
               style={[styles.level, { backgroundColor: on ? C.fox : C.card, borderColor: on ? C.fox : C.line }]}

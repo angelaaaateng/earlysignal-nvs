@@ -62,6 +62,7 @@ export function QuestRow({
       <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: q.done }}
+        aria-checked={q.done}
         accessibilityLabel={`${q.title}, ${sub}`}
         onPress={onToggle}
         style={style}

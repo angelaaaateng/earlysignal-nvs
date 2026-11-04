@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
+import { InstallBanner } from '@/pwa/InstallBanner';
 import { Icon, type IconName } from '@/ui/Icon';
 import { Pip } from '@/ui/Pip';
 import { Screen } from '@/ui/Screen';
@@ -11,6 +12,7 @@ export default function SignIn() {
 
   return (
     <Screen bg={C.burrow} contentStyle={{ paddingTop: 56, paddingHorizontal: 24, gap: 20 }}>
+      <InstallBanner />
       <View style={{ alignItems: 'center', gap: 10 }}>
         <Pip size={150} variant="peek" label="Pip the fox peeking out of a burrow" />
         <Text accessibilityRole="header" style={[display(800), { fontSize: 40, color: C.cream, letterSpacing: -0.4 }]}>

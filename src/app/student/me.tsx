@@ -45,8 +45,9 @@ export default function Me() {
               <Pressable
                 accessibilityRole="switch"
                 accessibilityState={{ checked: on }}
+                aria-checked={on}
                 accessibilityLabel={r.label}
-                onPress={() => act((db, now) => setSharing(db, h.studentId, h.studentId, r.key, !on, now))}
+                onPress={() => act('sharing.update', (db, now) => setSharing(db, h.studentId, h.studentId, r.key, !on, now), { key: r.key, value: !on })}
                 style={styles.switchHit}
               >
                 <View style={[styles.track, { backgroundColor: on ? C.green : C.faint, justifyContent: on ? 'flex-end' : 'flex-start' }]}>

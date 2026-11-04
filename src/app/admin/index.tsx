@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { useApp, USING_MOCK_DATA, useViewer } from '@/data/AppStore';
+import { useApp, useAuditView, USING_MOCK_DATA, useViewer } from '@/data/AppStore';
 import { adminDashboard, type AdminFamilyRow, type FamilyStatus } from '@/domain/admin';
 import { partOfDay } from '@/domain/dates';
 import { adminSuggestCoach } from '@/domain/mutations';
@@ -22,6 +22,7 @@ export default function AdminDashboard() {
   const { db, now, act, signOut } = useApp();
   // Screens never read `db` directly; they render the policy-scoped projection.
   const d = useMemo(() => adminDashboard(db, me.id, now), [db, me.id, now]);
+  useAuditView('admin.dashboard.view', me.orgId);
   const { width } = useWindowDimensions();
   const wide = width >= 900;
   const [section, setSection] = useState<Section>('Families');
@@ -34,7 +35,7 @@ export default function AdminDashboard() {
   const maxPct = Math.max(1, ...d.selfStarterWeeks.map((w) => w.pct));
 
   const onAction = (r: AdminFamilyRow) => {
-    if (r.action === 'Suggest coach') act((x, t) => adminSuggestCoach(x, me.id, r.studentId, t));
+    if (r.action === 'Suggest coach') act('referral.suggest_coach', (x, t) => adminSuggestCoach(x, me.id, r.studentId, t), { studentId: r.studentId });
     else if (r.action === 'Reach out') setContacted((s) => new Set(s).add(r.studentId));
     else setOpen((o) => (o === r.studentId ? null : r.studentId));
   };
