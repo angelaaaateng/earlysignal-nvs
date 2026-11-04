@@ -1,22 +1,23 @@
 name: Deploy to GitHub Pages
 
-# Builds the installable web app and publishes it to the gh-pages branch.
-# One-time setup: Settings → Pages → Build and deployment → Source:
-# "Deploy from a branch", Branch: gh-pages / (root).
+# Builds the installable web app and publishes it with the official Pages
+# actions. `enablement: true` switches Pages on for the repo the first time.
 on:
   push:
-    branches: [main, claude/earlysignal-app]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -31,10 +32,19 @@ jobs:
         run: node scripts/build-web.mjs
         env:
           EXPO_BASE_URL: /${{ github.event.repository.name }}
-      - name: Publish to gh-pages
-        run: |
-          cd dist
-          git init -q -b gh-pages
-          git add -A
-          git -c user.name="github-actions[bot]" -c user.email="41898299+github-actions[bot]@users.noreply.github.com" commit -q -m "Deploy ${GITHUB_SHA::7}"
-          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
