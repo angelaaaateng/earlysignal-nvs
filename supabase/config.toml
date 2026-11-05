@@ -15,7 +15,7 @@ major_version = 17
 [auth]
 enabled = true
 site_url = "http://localhost:8081"
-additional_redirect_urls = ["http://localhost:8081", "https://angelaaaateng.github.io/earlysignal-nvs/"]
+additional_redirect_urls = ["https://earlysignal-nvs.vercel.app"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 enable_signup = true

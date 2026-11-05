@@ -9,7 +9,7 @@ Open https://supabase.com/dashboard/project/vpfwybfgiqiiimzayydj/auth/providers
 2. Go to Authentication → Email Templates → "Magic Link". Replace the body with:
    <h2>Your EarlySignal sign-in code</h2><p>Enter this code in the app: <strong>{{ .Token }}</strong></p><p>It expires in 10 minutes. If you didn't request it, ignore this email.</p>
    Save.
-3. Go to Authentication → URL Configuration. Set Site URL to https://earlysignal-nvs.vercel.app and add these Redirect URLs: https://earlysignal-nvs.vercel.app/** and http://localhost:8081/** . Save.
+3. Go to Authentication → URL Configuration. Set Site URL to https://earlysignal-nvs.vercel.app and add this Redirect URL: https://earlysignal-nvs.vercel.app/** . Save.
 4. Go to Authentication → Attack Protection (or Security). Turn ON "Leaked password protection". Save.
 
 ## Part 2 — Google sign-in
