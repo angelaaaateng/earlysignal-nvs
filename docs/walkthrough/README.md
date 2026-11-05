@@ -148,7 +148,7 @@ Each child’s account shows the parental consent on file.
 
 ### 8. Add a child
 
-Parents create student accounts. The child signs in with the family code, their first name and a PIN: never an email. The birth date is used only to check whether consent is needed.
+Parents create student accounts. The child never types anything to sign in: the parent taps **Open Burrow** next to their name on the Account tab. The birth date is used only to check whether consent is needed.
 
 <img src="screens/2-parent-08.png" alt="Add a child" width="300">
 

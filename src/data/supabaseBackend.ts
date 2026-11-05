@@ -59,27 +59,29 @@ export class SupabaseBackend implements Backend {
     }
   }
 
-  async requestEmailCode(email: string) {
-    const { error } = await this.sb.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true } });
-    if (error) return { ok: false as const, message: friendlyAuth(error.message) };
-    return { ok: true as const };
+  async signUp(input: { email: string; password: string; displayName: string }): Promise<SignInResult> {
+    const { data, error } = await this.sb.auth.signUp({
+      email: input.email.trim().toLowerCase(),
+      password: input.password,
+      options: { data: { display_name: input.displayName.trim() } },
+    });
+    if (error) return { ok: false, message: friendlyAuth(error.message) };
+    if (!data.session) return { ok: false, message: 'Account created, but email confirmation is on in Supabase. Turn it off (Auth → Providers → Email) or confirm the email, then sign in.' };
+    try {
+      return { ok: true, session: await this.sessionFor(data.user!.id) };
+    } catch (e) {
+      return { ok: false, message: toBackendError(e).message };
+    }
   }
 
-  async verifyEmailCode(email: string, code: string): Promise<SignInResult> {
-    const { data, error } = await this.sb.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' });
+  async signInWithPassword(email: string, password: string): Promise<SignInResult> {
+    const { data, error } = await this.sb.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     if (error || !data.user) return { ok: false, message: friendlyAuth(error?.message ?? 'Sign-in failed') };
     try {
       return { ok: true, session: await this.sessionFor(data.user.id) };
     } catch (e) {
       return { ok: false, message: toBackendError(e).message };
     }
-  }
-
-  async signInWithGoogle() {
-    const redirectTo = typeof window !== 'undefined' ? window.location.origin + (process.env.EXPO_PUBLIC_BASE_URL ?? '') + '/' : undefined;
-    const { error } = await this.sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo, queryParams: { prompt: 'select_account' } } });
-    if (error) return { ok: false as const, message: friendlyAuth(error.message) };
-    return { ok: true as const };
   }
 
   async issueChildSignIn(_s: Session, studentId: string) {
@@ -350,7 +352,10 @@ export class SupabaseBackend implements Backend {
 
 function friendlyAuth(msg: string): string {
   if (/rate limit|too many/i.test(msg)) return 'Too many tries. Wait a minute and try again.';
-  if (/expired|invalid/i.test(msg)) return 'That code didn’t work. Check it and try again, or request a new one.';
+  if (/already registered|already been registered|already exists/i.test(msg)) return 'There’s already an account with that email. Sign in instead.';
+  if (/invalid login credentials/i.test(msg)) return 'Wrong email or password.';
+  if (/password should be at least|weak|at least 6/i.test(msg)) return 'Use a password of at least 8 characters.';
+  if (/email address .* is invalid/i.test(msg)) return 'That email address doesn’t look right.';
   if (/network|fetch/i.test(msg)) return new BackendError('NETWORK', '').message || 'Can’t reach EarlySignal right now.';
   return msg;
 }

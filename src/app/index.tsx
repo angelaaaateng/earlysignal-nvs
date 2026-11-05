@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { useApp } from '@/data/AppStore';
 import type { Role } from '@/domain/types';
 import { InstallBanner } from '@/pwa/InstallBanner';
@@ -9,12 +8,12 @@ import { Pip } from '@/ui/Pip';
 import { Screen } from '@/ui/Screen';
 import { body, C, display, eyebrow } from '@/ui/theme';
 
-type Mode = 'pick' | 'student' | 'email' | 'code';
+type Mode = 'pick' | 'student' | 'signin' | 'signup';
 
 /**
  * Canvas 0 · Sign in (pick a role).
+ * Parents and admins: email + password, created here. Nothing is emailed.
  * Students: signed in by their parent's tap (never an email or password: COPPA).
- * Parents and admins: email + one-time code. Admins must be invited first.
  * With the demo backend the cards sign straight in, as on the canvas.
  */
 export default function SignIn() {
@@ -24,8 +23,9 @@ export default function SignIn() {
   const [role, setRole] = useState<Role>('parent');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
 
   const pick = (r: Role) => {
     setError('');
@@ -35,7 +35,7 @@ export default function SignIn() {
       void signIn((b) => b.signInDemo!(r)).finally(() => setBusy(false));
       return;
     }
-    setMode(r === 'student' ? 'student' : 'email');
+    setMode(r === 'student' ? 'student' : 'signin');
   };
 
   const go = async (fn: () => Promise<{ ok: boolean; message?: string }>) => {
@@ -53,13 +53,14 @@ export default function SignIn() {
     }
   };
 
-  const emailGo = () =>
-    void go(async () => {
-      const r = await backend.requestEmailCode(email);
-      if (r.ok) setMode('code');
-      return r;
-    });
-  const codeGo = () => void go(() => signIn((b) => b.verifyEmailCode(email, otp)));
+  const validEmail = /^\S+@\S+\.\S+$/.test(email);
+  const validPassword = password.length >= 8;
+  const signInGo = () => void go(() => signIn((b) => b.signInWithPassword(email, password)));
+  const signUpGo = () => void go(() => signIn((b) => b.signUp({ email, password, displayName: name })));
+  const switchTo = (m: Mode) => {
+    setMode(m);
+    setError('');
+  };
 
   return (
     <Screen bg={C.burrow} contentStyle={{ paddingTop: 56, paddingHorizontal: 24, gap: 20 }}>
@@ -89,7 +90,7 @@ export default function SignIn() {
             <RoleCard onPress={() => pick('admin')} title="School or clinic admin" sub="Partner dashboard" icon="monitor" variant="outline" disabled={busy} />
           </View>
           <Text style={[body(400), { fontSize: 13, color: C.creamMuted, textAlign: 'center' }]}>
-            {demo ? 'Demo: each card opens an example account.' : 'Under 13? A parent sets up your account first.'}
+            {demo ? 'Demo: each card opens an example account.' : 'Students are signed in by a parent. No password to remember.'}
           </Text>
         </>
       )}
@@ -101,53 +102,30 @@ export default function SignIn() {
             Your parent opens your Burrow
           </Text>
           <Text style={[body(400), { fontSize: 15, color: C.creamMuted }]}>
-            Nothing to type. Ask your parent to open EarlySignal, go to Account, and tap <Text style={body(800)}>Open your Burrow</Text>. On their phone it opens straight away; on yours they can send you a link.
+            Nothing to type. Ask your parent to sign in, go to <Text style={body(800)}>Account</Text>, and tap <Text style={body(800)}>Open Burrow</Text> next to your name. Your Burrow opens right here.
           </Text>
-          <Text style={[body(400), { fontSize: 13, color: C.creamMuted }]}>13 or older with your own Google account? Use “I’m a parent” → Continue with Google.</Text>
         </View>
       )}
 
-      {mode === 'email' && (
+      {(mode === 'signin' || mode === 'signup') && (
         <View style={{ gap: 12 }}>
-          <Text style={eyebrow(C.gold)}>{role === 'admin' ? 'Partner admin' : 'Parent'} sign-in</Text>
+          <Text style={eyebrow(C.gold)}>{role === 'admin' ? 'Partner admin' : 'Parent'}</Text>
           <Text accessibilityRole="header" style={[display(700), { fontSize: 22, color: C.cream }]}>
-            We’ll email you a one-time code
+            {mode === 'signup' ? 'Create your account' : 'Sign in'}
           </Text>
+          {mode === 'signup' && <Field label="Your name" value={name} onChange={setName} placeholder="Ana Santos" autoCapitalize="words" />}
           <Field label="Email" value={email} onChange={setEmail} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" />
-          <Text style={[body(400), { fontSize: 13, color: C.creamMuted }]}>
-            {role === 'admin' ? 'Admin accounts are invite-only. Use the email your school or clinic was invited with.' : 'New here? Entering your email creates your parent account. No password to remember.'}
-          </Text>
-          <Primary label={busy ? 'Sending…' : 'Send code'} disabled={busy || !/^\S+@\S+\.\S+$/.test(email)} onPress={emailGo} />
-          {backend.signInWithGoogle && (
-            <>
-              <Text style={[body(700), { fontSize: 13, color: C.creamMuted, textAlign: 'center' }]}>or</Text>
-              <Pressable
-                accessibilityRole="button"
-                disabled={busy}
-                onPress={() => void go(() => backend.signInWithGoogle!())}
-                style={[styles.google, busy && { opacity: 0.6 }]}
-              >
-                <GoogleMark />
-                <Text style={[body(800), { fontSize: 16, color: C.ink }]}>Continue with Google</Text>
-              </Pressable>
-            </>
+          <Field label="Password" value={password} onChange={setPassword} placeholder={mode === 'signup' ? 'At least 8 characters' : '••••••••'} secure />
+          {mode === 'signup' && role === 'admin' && (
+            <Text style={[body(400), { fontSize: 13, color: C.creamMuted }]}>Admin accounts are invite-only. Use the email your school or clinic was invited with.</Text>
           )}
-        </View>
-      )}
-
-      {mode === 'code' && (
-        <View style={{ gap: 12 }}>
-          <Text style={eyebrow(C.gold)}>Check your email</Text>
-          <Text accessibilityRole="header" style={[display(700), { fontSize: 22, color: C.cream }]}>
-            We sent a sign-in email to {email}
-          </Text>
-          <Text style={[body(400), { fontSize: 14, color: C.creamMuted }]}>
-            Tap the link in it on this device, or enter the code if the email has one.
-          </Text>
-          <Field label="Code (if shown)" value={otp} onChange={(v) => setOtp(v.replace(/\D/g, '').slice(0, 8))} placeholder="123456" keyboardType="number-pad" />
-          <Primary label={busy ? 'Signing in…' : 'Sign in with code'} disabled={busy || otp.length < 6} onPress={codeGo} />
-          <Pressable accessibilityRole="button" onPress={emailGo} disabled={busy} style={{ minHeight: 44, justifyContent: 'center' }}>
-            <Text style={[body(700), { fontSize: 14, color: C.gold }]}>Send a new code</Text>
+          <Primary
+            label={busy ? (mode === 'signup' ? 'Creating…' : 'Signing in…') : mode === 'signup' ? 'Create account' : 'Sign in'}
+            disabled={busy || !validEmail || !validPassword || (mode === 'signup' && !name.trim())}
+            onPress={mode === 'signup' ? signUpGo : signInGo}
+          />
+          <Pressable accessibilityRole="button" onPress={() => switchTo(mode === 'signup' ? 'signin' : 'signup')} disabled={busy} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={[body(700), { fontSize: 14, color: C.gold }]}>{mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account'}</Text>
           </Pressable>
         </View>
       )}
@@ -159,14 +137,7 @@ export default function SignIn() {
       )}
 
       {mode !== 'pick' && (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            setMode('pick');
-            setError('');
-          }}
-          style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
-        >
+        <Pressable accessibilityRole="button" onPress={() => switchTo('pick')} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
           <Text style={[body(700), { fontSize: 14, color: C.creamMuted }]}>← Back</Text>
         </Pressable>
       )}
@@ -199,19 +170,7 @@ function RoleCard({ title, sub, icon, variant, onPress, disabled }: { title: str
   );
 }
 
-/** The Google "G" in brand colours. */
-function GoogleMark() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 48 48" aria-hidden>
-      <Path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.5 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
-      <Path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z" />
-      <Path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z" />
-      <Path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
-    </Svg>
-  );
-}
-
-function Field(props: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; secure?: boolean; keyboardType?: 'email-address' | 'number-pad'; autoCapitalize?: 'none' | 'words' | 'characters' }) {
+function Field(props: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; secure?: boolean; keyboardType?: 'email-address'; autoCapitalize?: 'none' | 'words' }) {
   return (
     <View style={{ gap: 6 }}>
       <Text style={[body(800), { fontSize: 14, color: C.cream }]}>{props.label}</Text>
@@ -222,9 +181,10 @@ function Field(props: { label: string; value: string; onChange: (v: string) => v
         placeholder={props.placeholder}
         placeholderTextColor={C.faint}
         secureTextEntry={props.secure}
-        keyboardType={props.secure ? 'number-pad' : props.keyboardType}
+        keyboardType={props.keyboardType}
         autoCapitalize={props.autoCapitalize ?? 'none'}
         autoCorrect={false}
+        textContentType={props.secure ? 'password' : props.keyboardType ? 'emailAddress' : 'name'}
         style={[body(400), styles.input]}
       />
     </View>
@@ -244,5 +204,4 @@ const styles = StyleSheet.create({
   chip: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   input: { fontSize: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1.5, borderColor: C.burrowLine, backgroundColor: C.burrowDeep, color: C.cream, minHeight: 48 },
   primary: { backgroundColor: C.gold, borderRadius: 18, padding: 16, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
-  google: { backgroundColor: C.card, borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 48 },
 });

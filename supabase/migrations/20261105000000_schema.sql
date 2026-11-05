@@ -50,7 +50,7 @@ create table public.families (
   id uuid primary key default gen_random_uuid(),
   org_id uuid references public.orgs (id),
   admin_opt_in boolean not null default false,
-  -- Short code a student types to sign in (with their PIN). Rotatable.
+  -- Legacy short code; no longer used for sign-in (the parent's tap signs the child in).
   join_code text not null unique default upper(substr(encode(extensions.gen_random_bytes(6), 'hex'), 1, 8)),
   enrolled_at timestamptz not null default now()
 );

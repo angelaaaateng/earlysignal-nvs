@@ -54,12 +54,13 @@ export class MockBackend implements Backend {
     return null;
   }
 
-  async requestEmailCode() {
-    return { ok: false as const, message: 'Email sign-in needs the real backend. Use a demo card below.' };
+  async signUp(): Promise<SignInResult> {
+    return { ok: false, message: 'Creating accounts needs the real backend. This is the demo: use a card above.' };
   }
-  async verifyEmailCode(): Promise<SignInResult> {
-    return { ok: false, message: 'Email sign-in needs the real backend.' };
+  async signInWithPassword(): Promise<SignInResult> {
+    return { ok: false, message: 'This is the demo: use a card above.' };
   }
+
   private tokens = new Map<string, { studentId: string; expires: number }>();
 
   async issueChildSignIn(s: Session, studentId: string) {

@@ -30,11 +30,10 @@ export interface Backend {
 
   // ---- auth
   restoreSession(): Promise<Session | null>;
-  /** Parent or admin, by email. Sends a one-time code; returns nothing. */
-  requestEmailCode(email: string): Promise<{ ok: true } | { ok: false; message: string }>;
-  verifyEmailCode(email: string, code: string): Promise<SignInResult>;
-  /** Parent or admin via Google. Web redirects away and back; the session is picked up on return. */
-  signInWithGoogle?(): Promise<{ ok: true } | { ok: false; message: string }>;
+  /** Parent or admin: create an account. Admin accounts need an invite for that email. */
+  signUp(input: { email: string; password: string; displayName: string }): Promise<SignInResult>;
+  /** Parent or admin: sign in. */
+  signInWithPassword(email: string, password: string): Promise<SignInResult>;
   /**
    * Student sign-in, started by the parent: the parent's app mints a short-lived
    * single-use token for one child; this device redeems it for a session.

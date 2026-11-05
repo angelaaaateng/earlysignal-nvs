@@ -38,7 +38,7 @@ Pieces: `public/manifest.json`, `public/index.html` (iOS home-screen tags, `view
 
 **Live, two deployments:**
 - **Demo (mock data):** https://angelaaaateng.github.io/earlysignal-nvs/ (GitHub Pages; redeploys on every push to `main`). The role cards open example accounts.
-- **Real accounts (Supabase):** https://earlysignal-nvs.vercel.app (Vercel; `vercel.json` sets the Supabase URL and publishable key at build time). Parents sign up by email or Google; a parent's tap signs their child in; admins by invite.
+- **Real accounts (Supabase):** https://earlysignal-nvs.vercel.app (Vercel; `vercel.json` sets the Supabase URL and publishable key at build time). Parents create an account with email + password; a parent's tap signs their child in; admins by invite.
 
 ## Observability and logging
 
@@ -55,22 +55,22 @@ Pieces: `public/manifest.json`, `public/index.html` (iOS home-screen tags, `view
 ## Testing and CI
 
 - **Unit (Jest, 28 tests):** the four access rules in the mock domain, the check-in and quest loop, COPPA, logger redaction.
-- **Database (Jest + pg, 18 tests):** the real migration on Postgres, queried as each role with no app code: the four rules, account creation, audit log, consent withdrawal and deletion.
+- **Database (Jest + pg, 20 tests):** the real migration on Postgres, queried as each role with no app code: the four rules, account creation, audit log, consent withdrawal and deletion.
 - **End-to-end (Playwright, 44 runs):** against the production build, on iPhone 14, Pixel 7 and desktop profiles. Covers the full student loop, the parent summary and help, the COPPA flow, the admin dashboard, private notes never reaching parent, admin or logs, live sharing changes, role guards on typed URLs, persistence across reloads, PWA install metadata, offline launch, deep links, security headers, the audit log and zero console errors.
 - **CI:** `.github/workflows/ci.yml` runs typecheck, lint, unit, database rules (Postgres 17 service), e2e (with a report on failure) and an iOS + Android bundle build, on every PR and push to `main`.
 - **Security headers:** CSP, `X-Frame-Options: DENY`, `nosniff`, a strict referrer policy and a Permissions-Policy that blocks camera, microphone and location. Hashed build files are cached for a year; HTML and the service worker are never cached.
 
 ## Backend (Supabase)
 
-`supabase/migrations/20261105000000_schema.sql` is the whole backend: tables, row-level security, and the functions the app calls. `supabase/tests/rls.test.ts` runs that migration against a real Postgres and hits it **as each role, with no app code**, to prove the rules hold for anyone who talks to the database directly (18 tests, in CI on Postgres 17).
+`supabase/migrations/20261105000000_schema.sql` is the whole backend: tables, row-level security, and the functions the app calls. `supabase/tests/rls.test.ts` runs that migration against a real Postgres and hits it **as each role, with no app code**, to prove the rules hold for anyone who talks to the database directly (20 tests, in CI on Postgres 17).
 
 **How people sign in and get accounts**
 
 | Who | Sign-in | Account comes from |
 |---|---|---|
-| Parent | Email + one-time code (no password) | Entering an email the first time. A trigger creates the parent row and their family. |
+| Parent | Email + password (8+ characters) | "Create account" on the sign-in screen. A trigger creates the parent row and their family. No email is sent, so Supabase "Confirm email" must stay OFF. |
 | Student | Nothing to type. The parent taps **Open [child]'s Burrow** on the Account tab; a 10-minute single-use token signs the child in on that device. | The parent, from the Account tab. Under 13 → consent recorded first, or `create_student()` refuses. |
-| Admin | Email + one-time code | Invite only: an `admin_invites` row must exist for the email (see `supabase/seed`). |
+| Admin | Email + password | Invite only: an `admin_invites` row must exist for the email (see `supabase/seed`). |
 
 **Where the four rules live in the database**
 
