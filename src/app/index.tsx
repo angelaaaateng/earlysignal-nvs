@@ -13,7 +13,7 @@ type Mode = 'pick' | 'student' | 'email' | 'code';
 
 /**
  * Canvas 0 · Sign in (pick a role).
- * Students: family code + first name + PIN (never an email: COPPA).
+ * Students: signed in by their parent's tap (never an email or password: COPPA).
  * Parents and admins: email + one-time code. Admins must be invited first.
  * With the demo backend the cards sign straight in, as on the canvas.
  */
@@ -24,9 +24,6 @@ export default function SignIn() {
   const [role, setRole] = useState<Role>('parent');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [pin, setPin] = useState('');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
 
@@ -56,7 +53,6 @@ export default function SignIn() {
     }
   };
 
-  const studentGo = () => void go(() => signIn((b) => b.signInStudent(code, name, pin)));
   const emailGo = () =>
     void go(async () => {
       const r = await backend.requestEmailCode(email);
@@ -102,12 +98,12 @@ export default function SignIn() {
         <View style={{ gap: 12 }}>
           <Text style={eyebrow(C.gold)}>Student sign-in</Text>
           <Text accessibilityRole="header" style={[display(700), { fontSize: 22, color: C.cream }]}>
-            Ask your parent for the family code
+            Your parent opens your Burrow
           </Text>
-          <Field label="Family code" value={code} onChange={(v) => setCode(v.toUpperCase())} placeholder="e.g. 7F3A9C2B" autoCapitalize="characters" />
-          <Field label="Your first name" value={name} onChange={setName} placeholder="Maya" autoCapitalize="words" />
-          <Field label="PIN" value={pin} onChange={(v) => setPin(v.replace(/\D/g, '').slice(0, 6))} placeholder="••••" secure />
-          <Primary label={busy ? 'Opening the Burrow…' : 'Go to my Burrow'} disabled={busy || !code || !name || pin.length < 4} onPress={studentGo} />
+          <Text style={[body(400), { fontSize: 15, color: C.creamMuted }]}>
+            Nothing to type. Ask your parent to open EarlySignal, go to Account, and tap <Text style={body(800)}>Open your Burrow</Text>. On their phone it opens straight away; on yours they can send you a link.
+          </Text>
+          <Text style={[body(400), { fontSize: 13, color: C.creamMuted }]}>13 or older with your own Google account? Use “I’m a parent” → Continue with Google.</Text>
         </View>
       )}
 

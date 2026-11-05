@@ -38,7 +38,7 @@ export class MockBackend implements Backend {
   private session(uid: string): Session {
     const user = this.db.users.find((u) => u.id === uid)!;
     const fam = user.role === 'parent' ? familiesOfParent(this.db, uid)[0] : undefined;
-    return { user, familyId: fam?.id, joinCode: fam ? 'DEMO-' + fam.id.slice(-4).toUpperCase() : undefined };
+    return { user, familyId: fam?.id };
   }
 
   async restoreSession() {
@@ -60,16 +60,24 @@ export class MockBackend implements Backend {
   async verifyEmailCode(): Promise<SignInResult> {
     return { ok: false, message: 'Email sign-in needs the real backend.' };
   }
-  async signInStudent(joinCode: string, firstName: string, pin: string): Promise<SignInResult> {
-    // The demo accepts Maya with any 4-digit PIN and the demo family code.
-    const sess = this.session(IDS.maya);
-    if (joinCode.trim().toUpperCase() === 'DEMO-' + IDS.mayaFamily.slice(-4).toUpperCase() && firstName.trim().toLowerCase() === 'maya' && /^\d{4,6}$/.test(pin)) {
-      this.userId = IDS.maya;
-      void saveState(this.db, this.userId);
-      return { ok: true, session: sess };
-    }
-    return { ok: false, message: 'That family code, name and PIN don’t match.' };
+  private tokens = new Map<string, { studentId: string; expires: number }>();
+
+  async issueChildSignIn(s: Session, studentId: string) {
+    if (!familiesOfParent(this.db, s.user.id).some((f) => f.studentIds.includes(studentId))) throw toBackendError(new Error('ACCESS_DENIED: not this student’s parent'));
+    const t = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    this.tokens.set(t, { studentId, expires: Date.now() + 10 * 60_000 });
+    return t;
   }
+
+  async redeemChildSignIn(token: string): Promise<SignInResult> {
+    const t = this.tokens.get(token);
+    this.tokens.delete(token);
+    if (!t || t.expires < Date.now()) return { ok: false, message: 'This sign-in link has expired. Ask your parent to tap your name again.' };
+    this.userId = t.studentId;
+    void saveState(this.db, this.userId);
+    return { ok: true, session: this.session(t.studentId) };
+  }
+
   async signInDemo(role: Role): Promise<SignInResult> {
     this.userId = DEMO_ACCOUNTS[role];
     void saveState(this.db, this.userId);
@@ -131,7 +139,7 @@ export class MockBackend implements Backend {
     });
     return id;
   }
-  async createStudent(s: Session, input: { firstName: string; lastName: string; birthDate: string; grade?: number; pin: string; consentId?: string }) {
+  async createStudent(s: Session, input: { firstName: string; lastName: string; birthDate: string; grade?: number; consentId?: string }) {
     let id = '';
     this.run((db, now) => {
       const r = createStudentAccount(db, s.user.id, { familyId: s.familyId!, ...input }, now);

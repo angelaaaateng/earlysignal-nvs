@@ -80,7 +80,7 @@ describeDb('Supabase schema: rules enforced in the database', () => {
     it('COPPA: an under-13 student cannot be created without consent, and the failure creates nothing', async () => {
       const before = (await db.query('select count(*)::int as n from auth.users')).rows[0].n;
       await expect(
-        call(ids.mom, `select public.create_student($1, 'Maya', 'Santos', (current_date - interval '11 years')::date, 6::smallint, '1234')`, [ids.family]),
+        call(ids.mom, `select public.create_student($1, 'Maya', 'Santos', (current_date - interval '11 years')::date, 6::smallint)`, [ids.family]),
       ).rejects.toThrow(/CONSENT_REQUIRED/);
       const after = (await db.query('select count(*)::int as n from auth.users')).rows[0].n;
       expect(after).toBe(before);
@@ -96,16 +96,16 @@ describeDb('Supabase schema: rules enforced in the database', () => {
       );
       // A stranger can't use someone else's consent or family.
       await expect(
-        call(ids.stranger, `select public.create_student($1, 'Maya', 'Santos', $2, 6::smallint, '1234', $3)`, [ids.family, birth, consentId]),
+        call(ids.stranger, `select public.create_student($1, 'Maya', 'Santos', $2, 6::smallint, $3)`, [ids.family, birth, consentId]),
       ).rejects.toThrow(/ACCESS_DENIED/);
       const { create_student: sid } = await call(
-        ids.mom, `select public.create_student($1, 'Maya', 'Santos', $2, 6::smallint, '1234', $3)`, [ids.family, birth, consentId],
+        ids.mom, `select public.create_student($1, 'Maya', 'Santos', $2, 6::smallint, $3)`, [ids.family, birth, consentId],
       );
       ids.maya = sid;
       const c = await db.query(`select student_id from public.parental_consents where id = $1`, [consentId]);
       expect(c.rows[0].student_id).toBe(sid);
       await expect(
-        call(ids.mom, `select public.create_student($1, 'Leo', 'Santos', $2, 4::smallint, '1234', $3)`, [ids.family, birth, consentId]),
+        call(ids.mom, `select public.create_student($1, 'Leo', 'Santos', $2, 4::smallint, $3)`, [ids.family, birth, consentId]),
       ).rejects.toThrow(/CONSENT_REQUIRED/);
       // The student's auth email is synthetic and undeliverable.
       const au = await db.query(`select email from auth.users where id = $1`, [sid]);
@@ -114,20 +114,15 @@ describeDb('Supabase schema: rules enforced in the database', () => {
 
     it('13 and over needs no consent', async () => {
       const { create_student: sid } = await call(
-        ids.mom, `select public.create_student($1, 'Ines', 'Santos', '2010-01-01', 10::smallint, '5678')`, [ids.family],
+        ids.mom, `select public.create_student($1, 'Ines', 'Santos', '2010-01-01', 10::smallint)`, [ids.family],
       );
       expect(sid).toBeTruthy();
       ids.ines = sid;
     });
 
-    it('student sign-in lookup works by family code + first name, and PIN is stored hashed', async () => {
-      const code = (await db.query(`select join_code from public.families where id = $1`, [ids.family])).rows[0].join_code;
-      const r = await call(null, `select public.student_login_email($1, 'maya') as email`, [code]);
-      expect(r.email).toMatch(/@students\.earlysignal\.invalid$/);
+    it('a student account has a random secret nobody is shown', async () => {
       const pw = (await db.query(`select encrypted_password from auth.users where id = $1`, [ids.maya])).rows[0].encrypted_password;
-      expect(pw).not.toBe('1234');
-      expect((await db.query(`select extensions.crypt('1234', $1) = $1 as ok`, [pw])).rows[0].ok).toBe(true);
-      expect((await call(null, `select public.student_login_email('NOPE', 'maya') as email`)).email).toBeNull();
+      expect(pw).toMatch(/^\$2/); // bcrypt hash
     });
 
     it('only the student (not a parent, not an admin) can read or write student-only tables', async () => {
@@ -239,6 +234,27 @@ describeDb('Supabase schema: rules enforced in the database', () => {
     });
   });
 
+  describe('Child sign-in: the parent’s tap is the sign-in', () => {
+    it('parent mints a token for their own child only; the token redeems once into credentials', async () => {
+      await expect(call(ids.stranger, `select public.issue_child_sign_in($1)`, [ids.ines])).rejects.toThrow(/ACCESS_DENIED/);
+      const { issue_child_sign_in: token } = await call(ids.mom, `select public.issue_child_sign_in($1)`, [ids.ines]);
+      expect(token).toMatch(/^[0-9a-f]{48}$/);
+      const { redeem_child_sign_in: r } = await call(null, `select public.redeem_child_sign_in($1)`, [token]);
+      expect(r.studentId).toBe(ids.ines);
+      expect(r.firstName).toBe('Ines');
+      expect(r.email).toMatch(/@students\.earlysignal\.invalid$/);
+      expect(r.secret).toMatch(/^[0-9a-f]{64}$/);
+      // The returned secret is the student's current password, and the token is spent.
+      const pw = (await db.query(`select encrypted_password from auth.users where id = $1`, [ids.ines])).rows[0].encrypted_password;
+      expect((await db.query(`select extensions.crypt($1, $2) = $2 as ok`, [r.secret, pw])).rows[0].ok).toBe(true);
+      await expect(call(null, `select public.redeem_child_sign_in($1)`, [token])).rejects.toThrow(/expired/);
+      await expect(call(null, `select public.redeem_child_sign_in('nope')`)).rejects.toThrow(/expired/);
+      // The tokens table is invisible to every API role, by design.
+      await expect(rows(ids.mom, `select * from public.child_sign_in_tokens`)).rejects.toThrow(/permission denied/);
+      expect((await db.query(`select count(*)::int as n from public.child_sign_in_tokens where used_at is null`)).rows[0].n).toBe(0);
+  });
+  });
+
   describe('Audit and deletion', () => {
     it('every sensitive action is in the audit log with its actor', async () => {
       const ev = (await db.query(`select event, actor_id from public.audit_log order by id`)).rows;
@@ -272,6 +288,6 @@ describeDb('Anonymous callers', () => {
     await expect(call(null, `select public.current_streak($1)`, [ids.ines])).rejects.toThrow();
     await expect(rows(null, `select * from public.admin_family_rows()`)).rejects.toThrow();
     await expect(call(null, `select public.submit_check_in(3::smallint, '')`)).rejects.toThrow();
-    await expect(call(null, `select public.create_student($1, 'X', 'Y', '2010-01-01', 5::smallint, '1234')`, [ids.family])).rejects.toThrow();
+    await expect(call(null, `select public.create_student($1, 'X', 'Y', '2010-01-01', 5::smallint)`, [ids.family])).rejects.toThrow();
   });
 });

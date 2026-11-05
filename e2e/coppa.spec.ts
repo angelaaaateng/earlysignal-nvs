@@ -12,7 +12,6 @@ test.describe('COPPA: consent before an under-13 account exists', () => {
     await label(page, 'First name').fill('Leo');
     await label(page, 'Last name').fill('Santos');
     await label(page, 'Birth date').fill('2017-02-10');
-    await label(page, 'Sign-in PIN').fill('1234');
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await expect(text(page, 'Leo is under 13. We need your consent first.')).toBeVisible();
@@ -29,7 +28,6 @@ test.describe('COPPA: consent before an under-13 account exists', () => {
     await label(page, 'First name').fill('Leo');
     await label(page, 'Last name').fill('Santos');
     await label(page, 'Birth date').fill('2017-02-10');
-    await label(page, 'Sign-in PIN').fill('1234');
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('radio', { name: /Signed form/ }).click();
     await page.getByRole('checkbox').click();
@@ -48,7 +46,6 @@ test.describe('COPPA: consent before an under-13 account exists', () => {
     await label(page, 'First name').fill('Ines');
     await label(page, 'Last name').fill('Santos');
     await label(page, 'Birth date').fill('2010-01-01');
-    await label(page, 'Sign-in PIN').fill('5678');
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(text(page, 'Ines’s Burrow is ready')).toBeVisible();
   });
@@ -59,7 +56,6 @@ test.describe('COPPA: consent before an under-13 account exists', () => {
     await page.getByRole('button', { name: 'Set up a child’s account' }).click();
     await label(page, 'First name').fill('Leo');
     await label(page, 'Last name').fill('Santos');
-    await label(page, 'Sign-in PIN').fill('1234');
     await label(page, 'Birth date').fill('10/02/2017');
     await expect(text(page, 'Use the format YYYY-MM-DD.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();

@@ -40,13 +40,11 @@ export class SupabaseBackend implements Backend {
     const u = unwrap(await this.sb.from('users').select('id, role, display_name, birth_date, grade, org_id, created_at').eq('id', uid).single<Row>());
     const user: User = { id: u.id, role: u.role, displayName: u.display_name, birthDate: u.birth_date ?? undefined, grade: u.grade ?? undefined, orgId: u.org_id ?? undefined, createdAt: u.created_at };
     let familyId: string | undefined;
-    let joinCode: string | undefined;
     if (user.role === 'parent') {
-      const fp = unwrap(await this.sb.from('family_parents').select('family_id, families(join_code)').eq('user_id', uid).limit(1).maybeSingle<Row>());
+      const fp = unwrap(await this.sb.from('family_parents').select('family_id').eq('user_id', uid).limit(1).maybeSingle<Row>());
       familyId = fp?.family_id;
-      joinCode = fp?.families?.join_code;
     }
-    return { user, familyId, joinCode };
+    return { user, familyId };
   }
 
   async restoreSession() {
@@ -84,12 +82,19 @@ export class SupabaseBackend implements Backend {
     return { ok: true as const };
   }
 
-  async signInStudent(joinCode: string, firstName: string, pin: string): Promise<SignInResult> {
-    const email = unwrap(await this.sb.rpc('student_login_email', { p_join_code: joinCode, p_first_name: firstName })) as string | null;
-    if (!email) return { ok: false, message: 'That family code and name don’t match. Ask your parent for the code.' };
-    const { data, error } = await this.sb.auth.signInWithPassword({ email, password: pin.trim() });
-    if (error || !data.user) return { ok: false, message: 'That PIN isn’t right. Try again.' };
-    return { ok: true, session: await this.sessionFor(data.user.id) };
+  async issueChildSignIn(_s: Session, studentId: string) {
+    return unwrap(await this.sb.rpc('issue_child_sign_in', { p_student_id: studentId })) as string;
+  }
+
+  async redeemChildSignIn(token: string): Promise<SignInResult> {
+    const r = await this.sb.rpc('redeem_child_sign_in', { p_token: token });
+    if (r.error) return { ok: false, message: toBackendError(r.error).message };
+    const { email, secret } = r.data as { email: string; secret: string };
+    // A parent may be signed in on this device: the child's session replaces it.
+    await this.sb.auth.signOut({ scope: 'local' });
+    const auth = await this.sb.auth.signInWithPassword({ email, password: secret });
+    if (auth.error || !auth.data.user) return { ok: false, message: 'Couldn’t open the Burrow. Try again.' };
+    return { ok: true, session: await this.sessionFor(auth.data.user.id) };
   }
 
   async signOut() {
@@ -265,7 +270,7 @@ export class SupabaseBackend implements Backend {
       }),
     ) as string;
   }
-  async createStudent(s: Session, input: { firstName: string; lastName: string; birthDate: string; grade?: number; pin: string; consentId?: string }) {
+  async createStudent(s: Session, input: { firstName: string; lastName: string; birthDate: string; grade?: number; consentId?: string }) {
     return unwrap(
       await this.sb.rpc('create_student', {
         p_family_id: s.familyId,
@@ -273,7 +278,6 @@ export class SupabaseBackend implements Backend {
         p_last_name: input.lastName,
         p_birth_date: input.birthDate,
         p_grade: input.grade ?? null,
-        p_pin: input.pin,
         p_consent_id: input.consentId ?? null,
       }),
     ) as string;

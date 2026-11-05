@@ -449,10 +449,10 @@ begin
 end $$;
 
 -- The only way a student account comes into existence. Returns the student id.
--- `p_pin` is the child's sign-in PIN (4-6 digits); the family join code is the username.
+-- The account gets a random secret nobody sees; sign-in is by parent-issued token.
 create or replace function public.create_student(
   p_family_id uuid, p_first_name text, p_last_name text, p_birth_date date,
-  p_grade smallint, p_pin text, p_consent_id uuid default null
+  p_grade smallint, p_consent_id uuid default null
 ) returns uuid
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -460,12 +460,12 @@ declare
   fam public.families;
   c public.parental_consents;
   under13 boolean := p_birth_date > (current_date - interval '13 years');
+  secret text := encode(extensions.gen_random_bytes(32), 'hex');
 begin
   if public.my_role() <> 'parent' then raise exception 'ACCESS_DENIED: parents only'; end if;
   select * into fam from public.families f
     where f.id = p_family_id and exists (select 1 from public.family_parents fp where fp.family_id = f.id and fp.user_id = auth.uid());
   if not found then raise exception 'ACCESS_DENIED: not your family'; end if;
-  if p_pin !~ '^[0-9]{4,6}$' then raise exception 'INVALID: PIN must be 4-6 digits'; end if;
 
   if under13 then
     select * into c from public.parental_consents where id = p_consent_id;
@@ -485,7 +485,7 @@ begin
                           is_sso_user, is_anonymous)
   values (sid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
           lower(fam.join_code) || '+' || sid::text || '@students.earlysignal.invalid',
-          extensions.crypt(p_pin, extensions.gen_salt('bf')), now(),
+          extensions.crypt(secret, extensions.gen_salt('bf')), now(),
           jsonb_build_object('provider', 'email', 'providers', array['email'], 'role', 'student', 'family_id', fam.id),
           jsonb_build_object('display_name', trim(p_first_name)), now(), now(),
           '', '', '', '', '', '', '', '', false, false);
@@ -502,21 +502,6 @@ begin
   return sid;
 end $$;
 
--- Student sign-in: the app looks up the synthetic email for (join code, student
--- first name) and signs in with the PIN as password. Anyone may call this; it
--- reveals only whether a (code, name) pair exists, which the family already knows.
-create or replace function public.student_login_email(p_join_code text, p_first_name text) returns text
-language sql stable security definer set search_path = '' as $$
-  select au.email from auth.users au
-  join public.users u on u.id = au.id
-  join public.family_students fs on fs.user_id = u.id
-  join public.families f on f.id = fs.family_id
-  where upper(f.join_code) = upper(trim(p_join_code))
-    and lower(split_part(u.display_name, ' ', 1)) = lower(trim(p_first_name))
-    and u.role = 'student'
-  limit 1
-$$;
-grant execute on function public.student_login_email(text, text) to anon, authenticated;
 
 -- --------------------------------------------------------------- writes ---
 create or replace function public.submit_check_in(p_score smallint, p_note text default '') returns uuid
@@ -746,6 +731,49 @@ language sql stable security definer set search_path = '' as $$
   from weeks w where public.my_role() = 'admin' order by w.ws
 $$;
 
+
+-- ------------------------------------------------- child sign-in tokens ---
+-- A parent signs their child in: the parent's app mints a short-lived,
+-- single-use token for one child; the child's device redeems it for a session.
+-- No PIN, no family code: the parent's tap is the sign-in.
+create table public.child_sign_in_tokens (
+  token text primary key,
+  student_id uuid not null references public.users (id) on delete cascade,
+  issued_by uuid not null references public.users (id) on delete cascade,
+  expires_at timestamptz not null,
+  used_at timestamptz
+);
+alter table public.child_sign_in_tokens enable row level security;
+-- No policies on purpose: only the two functions below touch this table.
+revoke all on public.child_sign_in_tokens from anon, authenticated;
+
+-- Parent: mint a token for their own child. 10 minutes, one use.
+create or replace function public.issue_child_sign_in(p_student_id uuid) returns text
+language plpgsql security definer set search_path = '' as $$
+declare t text;
+begin
+  if public.my_role() <> 'parent' or not public.is_parent_of(p_student_id) then raise exception 'ACCESS_DENIED: not this student''s parent'; end if;
+  t := encode(extensions.gen_random_bytes(24), 'hex');
+  delete from public.child_sign_in_tokens where issued_by = auth.uid() and (used_at is not null or expires_at < now());
+  insert into public.child_sign_in_tokens (token, student_id, issued_by, expires_at) values (t, p_student_id, auth.uid(), now() + interval '10 minutes');
+  perform public.log_event('child.sign_in.issue', p_student_id, null);
+  return t;
+end $$;
+
+-- Redeem: token only. Rotates the student's secret and returns it once, so the
+-- device can open the session; the secret is never stored in plain text.
+create or replace function public.redeem_child_sign_in(p_token text) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare r public.child_sign_in_tokens; em text; secret text := encode(extensions.gen_random_bytes(32), 'hex');
+begin
+  select * into r from public.child_sign_in_tokens where token = p_token for update;
+  if not found or r.used_at is not null or r.expires_at < now() then raise exception 'INVALID: this sign-in link has expired. Ask your parent to tap your name again.'; end if;
+  update public.child_sign_in_tokens set used_at = now() where token = p_token;
+  update auth.users set encrypted_password = extensions.crypt(secret, extensions.gen_salt('bf')), updated_at = now() where id = r.student_id returning email into em;
+  perform public.log_event('child.sign_in.redeem', r.student_id, null);
+  return jsonb_build_object('email', em, 'secret', secret, 'studentId', r.student_id, 'firstName', (select split_part(display_name, ' ', 1) from public.users where id = r.student_id));
+end $$;
+
 -- ---------------------------------------------------------- API surface ---
 -- `create or replace function` resets EXECUTE to PUBLIC, so this block must
 -- come last and be re-run after any function change. Anonymous callers get
@@ -757,4 +785,4 @@ grant execute on all functions in schema public to authenticated;
 revoke execute on function public.log_event(text, uuid, jsonb) from authenticated;
 revoke execute on function public.insert_family() from authenticated;
 revoke execute on function public.handle_new_auth_user() from authenticated;
-grant execute on function public.student_login_email(text, text) to anon;
+grant execute on function public.redeem_child_sign_in(text) to anon;

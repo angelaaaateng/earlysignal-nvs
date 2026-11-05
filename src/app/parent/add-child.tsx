@@ -23,13 +23,12 @@ const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
  * The account is created only after consent is recorded.
  */
 export default function AddChild() {
-  const { session } = useParent();
+  useParent();
   const { act, now } = useApp();
   const [step, setStep] = useState<'details' | 'consent' | 'done'>('details');
   const [first, setFirst] = useState('');
   const [last, setLast] = useState('');
   const [birth, setBirth] = useState('');
-  const [pin, setPin] = useState('');
   const [method, setMethod] = useState<ParentalConsent['method']>('card_check');
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
@@ -37,9 +36,8 @@ export default function AddChild() {
 
   const today = toDateKey(now);
   const validBirth = VALID_DATE.test(birth) && birth < today;
-  const validPin = /^\d{4,6}$/.test(pin);
-  const canContinue = first.trim() && last.trim() && validBirth && validPin;
-  const input = { firstName: first, lastName: last, birthDate: birth, pin };
+  const canContinue = first.trim() && last.trim() && validBirth;
+  const input = { firstName: first, lastName: last, birthDate: birth };
 
   const run = async (event: string, fn: Parameters<typeof act>[1]) => {
     setError('');
@@ -79,7 +77,6 @@ export default function AddChild() {
           <Field label="First name" value={first} onChange={setFirst} />
           <Field label="Last name" value={last} onChange={setLast} />
           <Field label="Birth date" value={birth} onChange={setBirth} placeholder="YYYY-MM-DD" hint={birth && !validBirth ? 'Use the format YYYY-MM-DD.' : 'Used only to check whether we need your consent.'} />
-          <Field label="Sign-in PIN" value={pin} onChange={(v) => setPin(v.replace(/\D/g, '').slice(0, 6))} placeholder="4–6 digits" secure hint={pin && !validPin ? '4 to 6 digits.' : `${first.trim() || 'Your child'} signs in with your family code${session.joinCode ? ` (${session.joinCode})` : ''}, their first name and this PIN. No email needed.`} />
           <View style={{ flexGrow: 1 }} />
           <Primary label={busy ? 'Creating…' : 'Continue'} disabled={!canContinue || busy} onPress={onContinue} />
         </>
@@ -136,12 +133,10 @@ export default function AddChild() {
           <Text style={[body(400), { fontSize: 15, color: C.muted }]}>
             {first.trim()} chooses what you can see on the Me tab. You’ll get a summary every Friday.
           </Text>
-          {session.joinCode && (
-            <View style={styles.card}>
-              <Text style={eyebrow(C.greenParent, 12)}>How {first.trim()} signs in</Text>
-              <Text style={[body(400), styles.p]}>Family code <Text style={body(800)}>{session.joinCode}</Text>, first name <Text style={body(800)}>{first.trim()}</Text>, and the PIN you just set.</Text>
-            </View>
-          )}
+          <View style={styles.card}>
+            <Text style={eyebrow(C.greenParent, 12)}>How {first.trim()} signs in</Text>
+            <Text style={[body(400), styles.p]}>Go to Account and tap <Text style={body(800)}>Open {first.trim()}’s Burrow</Text>. Nothing to type: no email, no code, no password.</Text>
+          </View>
           <View style={{ flexGrow: 1 }} />
           <Primary label="Back to Account" onPress={() => router.replace('/parent/account')} />
         </>
@@ -154,7 +149,7 @@ export default function AddChild() {
   );
 }
 
-function Field({ label, value, onChange, placeholder, hint, secure }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; hint?: string; secure?: boolean }) {
+function Field({ label, value, onChange, placeholder, hint }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; hint?: string }) {
   return (
     <View style={{ gap: 6 }}>
       <Text style={[body(800), { fontSize: 14, color: C.ink }]}>{label}</Text>
@@ -165,8 +160,6 @@ function Field({ label, value, onChange, placeholder, hint, secure }: { label: s
         placeholder={placeholder}
         placeholderTextColor={C.faint}
         autoCapitalize={label.includes('name') ? 'words' : 'none'}
-        secureTextEntry={secure}
-        keyboardType={secure ? 'number-pad' : 'default'}
         style={[body(400), styles.input]}
       />
       {hint && <Text style={[body(400), { fontSize: 12, color: C.muted }]}>{hint}</Text>}

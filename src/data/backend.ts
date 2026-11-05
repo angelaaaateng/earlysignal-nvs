@@ -15,8 +15,6 @@ export interface Session {
   user: User;
   /** Set for parents: the family they manage (one per parent for now). */
   familyId?: string;
-  /** Parents only: the family join code students sign in with. */
-  joinCode?: string;
 }
 
 export type SignInResult = { ok: true; session: Session } | { ok: false; message: string };
@@ -37,8 +35,13 @@ export interface Backend {
   verifyEmailCode(email: string, code: string): Promise<SignInResult>;
   /** Parent or admin via Google. Web redirects away and back; the session is picked up on return. */
   signInWithGoogle?(): Promise<{ ok: true } | { ok: false; message: string }>;
-  /** Student: family code + first name + PIN. Never an email. */
-  signInStudent(joinCode: string, firstName: string, pin: string): Promise<SignInResult>;
+  /**
+   * Student sign-in, started by the parent: the parent's app mints a short-lived
+   * single-use token for one child; this device redeems it for a session.
+   * The child never types anything.
+   */
+  issueChildSignIn(session: Session, studentId: string): Promise<string>;
+  redeemChildSignIn(token: string): Promise<SignInResult>;
   /** Mock only: the demo role cards. */
   signInDemo?(role: Role): Promise<SignInResult>;
   signOut(): Promise<void>;
@@ -57,7 +60,7 @@ export interface Backend {
   helpContacts(session: Session, studentId: string): Promise<HelpContact[]>;
   sendCheer(session: Session, studentId: string): Promise<void>;
   recordConsent(session: Session, input: { childFirstName: string; childBirthDate: string; method: ParentalConsent['method']; agreed: boolean }): Promise<string>;
-  createStudent(session: Session, input: { firstName: string; lastName: string; birthDate: string; grade?: number; pin: string; consentId?: string }): Promise<string>;
+  createStudent(session: Session, input: { firstName: string; lastName: string; birthDate: string; grade?: number; consentId?: string }): Promise<string>;
   setAdminOptIn(session: Session, optIn: boolean): Promise<void>;
   familyOptIn(session: Session): Promise<boolean>;
   deleteStudent(session: Session, studentId: string): Promise<void>;

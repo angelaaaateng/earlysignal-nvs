@@ -187,11 +187,11 @@ await tour({
       do: async ({ r, tap, wait }) => { await tap(r('radio', { name: /Executive-function coach/ })); await wait(1000); await tap(r('button', { name: 'Copy message' })); } },
     { title: 'Crisis line, always visible', text: 'If a child may be in danger: call or text 988 (U.S.).', do: async ({ t }) => t(/call or text/).scrollIntoViewIfNeeded() },
     { title: 'Account and consent records', text: 'Each child’s account shows the parental consent on file.', do: async ({ r, tap }) => tap(r('tab', { name: 'Account' })) },
-    { title: 'Add a child', text: 'Parents create student accounts. The child signs in with the family code, their first name and a PIN: never an email. The birth date is used only to check whether consent is needed.',
+    { title: 'Add a child', text: 'Parents create student accounts. The child never types anything: the parent taps Open Burrow and the child is in. The birth date is used only to check whether consent is needed.',
       do: async ({ r, tap, type, app }) => {
         await tap(r('button', { name: 'Set up a child’s account' }));
         const f = (l) => app.getByLabel(l).filter({ visible: true }).first();
-        await type(f('First name'), 'Leo'); await type(f('Last name'), 'Santos'); await type(f('Birth date'), '2017-02-10'); await type(f('Sign-in PIN'), '2468');
+        await type(f('First name'), 'Leo'); await type(f('Last name'), 'Santos'); await type(f('Birth date'), '2017-02-10');
       } },
     { title: 'Under 13: consent comes first', text: 'COPPA. A plain-language notice of what’s collected, what stays private and the parent’s rights. No account exists yet.',
       do: async ({ r, tap }) => tap(r('button', { name: 'Continue' })) },
