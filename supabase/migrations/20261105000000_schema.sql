@@ -69,10 +69,12 @@ create table public.family_students (
   unique (user_id) -- a student belongs to one family
 );
 
+-- COPPA evidence: outlives the accounts it references (parent/family set null on delete).
 create table public.parental_consents (
   id uuid primary key default gen_random_uuid(),
-  parent_id uuid not null references public.users (id),
-  family_id uuid not null references public.families (id),
+  parent_id uuid references public.users (id) on delete set null,
+  parent_email text,
+  family_id uuid references public.families (id) on delete set null,
   child_first_name text not null,
   child_birth_date date not null,
   method public.consent_method not null,
@@ -425,8 +427,8 @@ begin
   end if;
   if not p_agreed then raise exception 'CONSENT_REQUIRED: the parent must agree to the notice'; end if;
   if length(trim(p_child_first_name)) = 0 then raise exception 'INVALID: first name required'; end if;
-  insert into public.parental_consents (parent_id, family_id, child_first_name, child_birth_date, method, notice_version)
-  values (auth.uid(), p_family_id, trim(p_child_first_name), p_child_birth_date, p_method, p_notice_version)
+  insert into public.parental_consents (parent_id, parent_email, family_id, child_first_name, child_birth_date, method, notice_version)
+  values (auth.uid(), auth.jwt() ->> 'email', p_family_id, trim(p_child_first_name), p_child_birth_date, p_method, p_notice_version)
   returning id into cid;
   perform public.log_event('consent.record', cid, jsonb_build_object('familyId', p_family_id, 'method', p_method));
   return cid;

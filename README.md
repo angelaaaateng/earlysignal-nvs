@@ -36,7 +36,9 @@ It then opens full screen with its own icon, keeps its data between launches, an
 
 Pieces: `public/manifest.json`, `public/index.html` (iOS home-screen tags, `viewport-fit=cover` for the notch), `public/sw.js` + `scripts/postbuild-web.mjs` (per-build cache name and precache list), icons generated from Pip by `npm run icons`.
 
-**Live:** https://angelaaaateng.github.io/earlysignal-nvs/ (GitHub Pages, from the `gh-pages` branch; `.github/workflows/pages.yml` redeploys on every push to `main`). `vercel.json` is also ready for a Vercel deploy at the site root.
+**Live, two deployments:**
+- **Demo (mock data):** https://angelaaaateng.github.io/earlysignal-nvs/ (GitHub Pages; redeploys on every push to `main`). The role cards open example accounts.
+- **Real accounts (Supabase):** https://earlysignal-nvs.vercel.app (Vercel; `vercel.json` sets the Supabase URL and publishable key at build time). Parents sign up by email code; students with family code + PIN; admins by invite.
 
 ## Observability and logging
 

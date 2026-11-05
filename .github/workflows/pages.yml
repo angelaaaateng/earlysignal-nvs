@@ -31,6 +31,7 @@ jobs:
         run: node scripts/build-web.mjs
         env:
           EXPO_BASE_URL: /${{ github.event.repository.name }}
+          # The Pages site is the public demo (mock data). Real accounts run on Vercel (see vercel.json).
       - name: Publish to gh-pages
         run: |
           cd dist
