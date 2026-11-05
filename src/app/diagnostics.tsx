@@ -15,7 +15,7 @@ const LEVEL_COLOR: Record<LogEntry['level'], string> = { debug: C.faint, info: C
  * 100 log entries. Entries are already redacted: no names, notes or drafts.
  */
 export default function Diagnostics() {
-  const { user, resetDemo } = useApp();
+  const { user, resetDemo, backend } = useApp();
   const [logs, setLogs] = useState(() => recentLogs().slice(-100).reverse());
   const [copied, setCopied] = useState(false);
   const errors = logs.filter((l) => l.level === 'error').length;
@@ -25,6 +25,7 @@ export default function Diagnostics() {
     ['Session', LOG_SESSION],
     ['Platform', Platform.OS + (isStandalone() ? ' · installed app' : '')],
     ['Signed in as', user ? `${user.role} (${user.id})` : 'nobody'],
+    ['Backend', backend.kind === 'supabase' ? 'Supabase' : 'demo data on this device'],
     ['Log sink', process.env.EXPO_PUBLIC_LOG_ENDPOINT ? 'remote + device' : 'device only'],
     ['Errors in buffer', String(errors)],
   ];
@@ -52,13 +53,14 @@ export default function Diagnostics() {
             setCopied(true);
           }}
         />
-        <Btn
-          label="Reset demo data"
-          onPress={() => {
-            resetDemo();
-            router.replace('/');
-          }}
-        />
+        {backend.kind === 'mock' && (
+          <Btn
+            label="Reset demo data"
+            onPress={() => {
+              void resetDemo().then(() => router.replace('/'));
+            }}
+          />
+        )}
         <Btn label="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
       </View>
 

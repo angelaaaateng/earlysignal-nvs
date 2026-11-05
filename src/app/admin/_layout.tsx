@@ -13,7 +13,7 @@ export default function AdminLayout() {
         <Text style={[body(400), { fontSize: 16, color: C.creamMuted }]}>
           The admin dashboard is a web app. Sign in at the EarlySignal website from your school or clinic computer.
         </Text>
-        <Pressable accessibilityRole="button" onPress={signOut} style={{ backgroundColor: C.gold, borderRadius: 16, padding: 14, alignItems: 'center' }}>
+        <Pressable accessibilityRole="button" onPress={() => void signOut()} style={{ backgroundColor: C.gold, borderRadius: 16, padding: 14, alignItems: 'center' }}>
           <Text style={[body(800), { fontSize: 16, color: C.ink }]}>Sign out</Text>
         </Pressable>
       </View>

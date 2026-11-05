@@ -1,8 +1,8 @@
 import * as Clipboard from 'expo-clipboard';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useApp } from '@/data/AppStore';
-import { helpContactsFor } from '@/domain/parent';
+import { useLoad } from '@/data/AppStore';
+import type { HelpContact } from '@/domain/types';
 import { Icon } from '@/ui/Icon';
 import { useParent } from '@/ui/parent';
 import { BackButton, goBack, ParentNav, Screen } from '@/ui/Screen';
@@ -10,9 +10,9 @@ import { body, C, display, eyebrow } from '@/ui/theme';
 
 /** Canvas P2 · Parent: get human help. */
 export default function ParentHelp() {
-  const { me, studentId } = useParent();
-  const { db } = useApp();
-  const opts = useMemo(() => (studentId ? helpContactsFor(db, me.id, studentId) : []), [db, me.id, studentId]);
+  const { studentId } = useParent();
+  const loaded = useLoad<HelpContact[]>((b, s) => (studentId ? b.helpContacts(s, studentId) : Promise.resolve([])), [studentId]);
+  const opts = loaded.data ?? [];
   const [picked, setPicked] = useState(0);
   const [copied, setCopied] = useState(false);
   const cur = opts[picked];

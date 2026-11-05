@@ -1,9 +1,9 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { useApp, useAuditView, USING_MOCK_DATA, useViewer } from '@/data/AppStore';
-import { adminDashboard, type AdminFamilyRow, type FamilyStatus } from '@/domain/admin';
+import { useApp, useAuditView, useLoad, USING_MOCK_DATA, useViewer } from '@/data/AppStore';
+import type { AdminDashboard as Dashboard, AdminFamilyRow, FamilyStatus } from '@/domain/admin';
 import { partOfDay } from '@/domain/dates';
-import { adminSuggestCoach } from '@/domain/mutations';
+import { Loading, LoadError } from '@/ui/Loading';
 import { body, C, display, eyebrow } from '@/ui/theme';
 
 type Section = 'Families' | 'Follow-ups' | 'Referrals' | 'Invite families' | 'Reports';
@@ -19,9 +19,9 @@ const PILL: Record<FamilyStatus, [string, string]> = {
 /** Canvas A1 · Admin: partner dashboard. Only opted-in families, only what they share. */
 export default function AdminDashboard() {
   const me = useViewer('admin');
-  const { db, now, act, signOut } = useApp();
-  // Screens never read `db` directly; they render the policy-scoped projection.
-  const d = useMemo(() => adminDashboard(db, me.id, now), [db, me.id, now]);
+  const { now, act, signOut } = useApp();
+  // Screens never read raw data; they render the policy-scoped projection.
+  const loaded = useLoad<Dashboard>((b, s, t) => b.adminDashboard(s, t));
   useAuditView('admin.dashboard.view', me.orgId);
   const { width } = useWindowDimensions();
   const wide = width >= 900;
@@ -29,13 +29,21 @@ export default function AdminDashboard() {
   const [filter, setFilter] = useState<'flag' | 'all'>('flag');
   const [contacted, setContacted] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<string | null>(null);
+  const d = loaded.data;
+  if (!d) {
+    return (
+      <View style={[styles.page, { justifyContent: 'center' }]}>
+        {loaded.error ? <LoadError error={loaded.error} retry={loaded.reload} /> : <Loading />}
+      </View>
+    );
+  }
 
   const showFlagged = section === 'Follow-ups' || (section === 'Families' && filter === 'flag');
   const rows = showFlagged ? d.rows.filter((r) => r.flag) : d.rows;
   const maxPct = Math.max(1, ...d.selfStarterWeeks.map((w) => w.pct));
 
   const onAction = (r: AdminFamilyRow) => {
-    if (r.action === 'Suggest coach') act('referral.suggest_coach', (x, t) => adminSuggestCoach(x, me.id, r.studentId, t), { studentId: r.studentId });
+    if (r.action === 'Suggest coach') void act('referral.suggest_coach', (b, s) => b.adminSuggestCoach(s, r.studentId), { studentId: r.studentId });
     else if (r.action === 'Reach out') setContacted((s) => new Set(s).add(r.studentId));
     else setOpen((o) => (o === r.studentId ? null : r.studentId));
   };
@@ -69,7 +77,7 @@ export default function AdminDashboard() {
         <Text style={[body(400), { fontSize: 13, lineHeight: 19, color: C.creamMuted, marginTop: wide ? 0 : 16 }]}>
           You only see what each family chose to share. Never notes, messages or grades.
         </Text>
-        <Pressable accessibilityRole="button" onPress={signOut} style={{ marginTop: 12, minHeight: 36, justifyContent: 'center' }}>
+        <Pressable accessibilityRole="button" onPress={() => void signOut()} style={{ marginTop: 12, minHeight: 36, justifyContent: 'center' }}>
           <Text style={[body(700), { fontSize: 13, color: C.creamMuted, textDecorationLine: 'underline' }]}>Sign out</Text>
         </Pressable>
       </View>

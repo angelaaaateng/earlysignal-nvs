@@ -1,137 +1,126 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Db, Role, User } from '../domain/types';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type DependencyList, type ReactNode } from 'react';
+import type { Role, User } from '../domain/types';
+import { SUPABASE_CONFIGURED } from '../lib/supabase';
 import { log, setLogContext } from '../observability/logger';
-import { loadState, saveState, clearState } from './persist';
-import { buildSeed, IDS } from './seed';
+import type { Backend, Session, SignInResult } from './backend';
+import { toBackendError } from './backend';
+import { MockBackend } from './mockBackend';
+import { SupabaseBackend } from './supabaseBackend';
 
 /**
- * In-memory store + mock auth. This is the seam a real backend replaces:
- * keep the same shape (current user, `act` for writes), swap the internals.
- * The domain functions it calls already enforce every access rule, and the
- * backend must enforce the same rules server-side.
+ * Picks the backend once: Supabase when EXPO_PUBLIC_SUPABASE_URL is set,
+ * otherwise the on-device mock. Screens never know which one they talk to.
  */
-export const USING_MOCK_DATA = true;
+const USE_SUPABASE = SUPABASE_CONFIGURED && process.env.EXPO_PUBLIC_FORCE_MOCK !== '1';
 
-const DEMO_ACCOUNTS: Record<Role, string> = { student: IDS.maya, parent: IDS.mom, admin: IDS.patel };
+function makeBackend(): Backend {
+  return USE_SUPABASE ? new SupabaseBackend() : new MockBackend();
+}
+
+/** True when the app runs on demo data. Screens show an "Example data" badge. */
+export const USING_MOCK_DATA = !USE_SUPABASE;
 
 interface Store {
-  db: Db;
-  now: Date;
+  backend: Backend;
+  session: Session | null;
   user: User | null;
-  /** False until saved state has been read from the device. */
+  now: Date;
+  /** False until the saved session has been checked. */
   hydrated: boolean;
-  signInAs: (role: Role) => User;
-  signOut: () => void;
+  /** Bumped after every successful write so data hooks refetch. */
+  version: number;
+  signIn: (fn: (b: Backend) => Promise<SignInResult>) => Promise<SignInResult>;
+  signOut: () => Promise<void>;
   /**
-   * Apply a domain mutation as the signed-in user. `event` names the action
-   * in the audit log; `data` adds ids/enums (redacted by the logger anyway).
-   * Errors are logged and rethrown so the screen can show them.
+   * Run a write as the signed-in user. `event` names it in the audit log.
+   * Errors are logged and rethrown as BackendError so the screen can show them.
    */
-  act: (event: string, fn: (db: Db, now: Date) => Db, data?: Record<string, unknown>) => void;
-  /** Wipe saved data and start again from fresh mock data. */
-  resetDemo: () => void;
+  act: (event: string, fn: (b: Backend, s: Session) => Promise<unknown>, data?: Record<string, unknown>) => Promise<void>;
+  resetDemo: () => Promise<void>;
 }
 
 const Ctx = createContext<Store | null>(null);
 
-export function AppProvider({ children, initialNow }: { children: ReactNode; initialNow?: Date }) {
-  const [now, setNow] = useState(() => initialNow ?? new Date());
-  const [db, setDb] = useState(() => buildSeed(initialNow ?? new Date()));
-  const [userId, setUserId] = useState<string | null>(null);
+export function AppProvider({ children, backend: given }: { children: ReactNode; backend?: Backend }) {
+  const backend = useMemo(() => given ?? makeBackend(), [given]);
+  const [session, setSession] = useState<Session | null>(null);
   const [hydrated, setHydrated] = useState(false);
-  const dbRef = useRef(db);
-  const userRef = useRef<string | null>(null);
+  const [version, setVersion] = useState(0);
+  const [now, setNow] = useState(() => new Date());
+  const sessionRef = useRef<Session | null>(null);
 
-  // Restore the last session on this device.
+  const apply = useCallback((s: Session | null) => {
+    sessionRef.current = s;
+    setSession(s);
+    setLogContext(s ? { userId: s.user.id, role: s.user.role } : {});
+  }, []);
+
   useEffect(() => {
     let alive = true;
-    loadState().then((s) => {
-      if (!alive) return;
-      if (s) {
-        dbRef.current = s.db;
-        setDb(s.db);
-        if (s.userId && s.db.users.some((u) => u.id === s.userId)) {
-          userRef.current = s.userId;
-          setUserId(s.userId);
-          const u = s.db.users.find((x) => x.id === s.userId)!;
-          setLogContext({ userId: u.id, role: u.role });
-        }
-        log.info('state.restored', { savedAt: s.savedAt });
-      }
-      setHydrated(true);
-    });
+    backend
+      .restoreSession()
+      .then((s) => alive && apply(s))
+      .catch((e) => log.error('session.restore_failed', e))
+      .finally(() => alive && setHydrated(true));
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    const unsub = (backend as MockBackend).subscribe?.(() => setVersion((v) => v + 1));
     return () => {
       alive = false;
+      clearInterval(t);
+      unsub?.();
     };
-  }, []);
+  }, [backend, apply]);
 
-  // Persist after every change, once hydrated.
-  useEffect(() => {
-    if (hydrated) void saveState(db, userId);
-  }, [db, userId, hydrated]);
-
-  useEffect(() => {
-    if (initialNow) return;
-    const t = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(t);
-  }, [initialNow]);
-
-  const signInAs = useCallback((role: Role) => {
-    const u = dbRef.current.users.find((x) => x.id === DEMO_ACCOUNTS[role])!;
-    userRef.current = u.id;
-    setUserId(u.id);
-    setLogContext({ userId: u.id, role: u.role });
-    log.audit('auth.sign_in', { role, method: 'demo' });
-    return u;
-  }, []);
-
-  const signOut = useCallback(() => {
-    log.audit('auth.sign_out', {});
-    userRef.current = null;
-    setUserId(null);
-    setLogContext({});
-  }, []);
-
-  const act = useCallback((event: string, fn: (db: Db, now: Date) => Db, data?: Record<string, unknown>) => {
-    const t0 = Date.now();
-    try {
-      // Run synchronously so AccessDenied / ConsentRequiredError reach the caller.
-      const next = fn(dbRef.current, new Date());
-      dbRef.current = next;
-      setDb(next);
-      log.audit(event, { ...data, ok: true, ms: Date.now() - t0 });
-    } catch (e) {
-      log.audit(event, { ...data, ok: false, errorName: (e as Error)?.name });
-      log.error(`${event}.failed`, e);
-      throw e;
-    }
-  }, []);
-
-  const resetDemo = useCallback(() => {
-    void clearState();
-    const fresh = buildSeed(new Date());
-    dbRef.current = fresh;
-    setDb(fresh);
-    userRef.current = null;
-    setUserId(null);
-    setLogContext({});
-    log.audit('demo.reset', {});
-  }, []);
-
-  const value = useMemo<Store>(
-    () => ({
-      db,
-      now,
-      hydrated,
-      user: userId ? db.users.find((u) => u.id === userId) ?? null : null,
-      signInAs,
-      signOut,
-      act,
-      resetDemo,
-    }),
-    [db, now, hydrated, userId, signInAs, signOut, act, resetDemo],
+  const signIn = useCallback(
+    async (fn: (b: Backend) => Promise<SignInResult>) => {
+      const r = await fn(backend);
+      if (r.ok) {
+        apply(r.session);
+        log.audit('auth.sign_in', { role: r.session.user.role, backend: backend.kind });
+      } else {
+        log.warn('auth.sign_in_failed', { backend: backend.kind });
+      }
+      return r;
+    },
+    [backend, apply],
   );
 
+  const signOut = useCallback(async () => {
+    log.audit('auth.sign_out', {});
+    await backend.signOut();
+    apply(null);
+  }, [backend, apply]);
+
+  const act = useCallback(
+    async (event: string, fn: (b: Backend, s: Session) => Promise<unknown>, data?: Record<string, unknown>) => {
+      const s = sessionRef.current;
+      if (!s) throw toBackendError(new Error('ACCESS_DENIED: not signed in'));
+      const t0 = Date.now();
+      try {
+        await fn(backend, s);
+        log.audit(event, { ...data, ok: true, ms: Date.now() - t0 });
+        setVersion((v) => v + 1);
+      } catch (e) {
+        const err = toBackendError(e);
+        log.audit(event, { ...data, ok: false, errorName: err.code });
+        log.error(`${event}.failed`, err);
+        throw err;
+      }
+    },
+    [backend],
+  );
+
+  const resetDemo = useCallback(async () => {
+    await backend.resetDemo?.();
+    apply(null);
+    setVersion((v) => v + 1);
+    log.audit('demo.reset', {});
+  }, [backend, apply]);
+
+  const value = useMemo<Store>(
+    () => ({ backend, session, user: session?.user ?? null, now, hydrated, version, signIn, signOut, act, resetDemo }),
+    [backend, session, now, hydrated, version, signIn, signOut, act, resetDemo],
+  );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
@@ -141,11 +130,64 @@ export function useApp(): Store {
   return s;
 }
 
-/** The signed-in user, asserted to have `role`. Layout guards make this safe. */
+/** The signed-in session, asserted to have `role`. Layout guards make this safe. */
+export function useSession(role: Role): Session {
+  const { session } = useApp();
+  if (!session || session.user.role !== role) throw new Error(`Expected a signed-in ${role}`);
+  return session;
+}
+
 export function useViewer(role: Role): User {
-  const { user } = useApp();
-  if (!user || user.role !== role) throw new Error(`Expected a signed-in ${role}`);
-  return user;
+  return useSession(role).user;
+}
+
+export interface Loaded<T> {
+  data: T | undefined;
+  error: Error | null;
+  loading: boolean;
+  reload: () => void;
+}
+
+/**
+ * Load a projection through the backend. Refetches after every `act`, when
+ * the clock ticks, and when `deps` change. Keeps the last data while reloading.
+ */
+export function useLoad<T>(fn: (b: Backend, s: Session, now: Date) => Promise<T>, deps: DependencyList = []): Loaded<T> {
+  const { backend, session, now, version } = useApp();
+  const [tick, setTick] = useState(0);
+  // Result keyed by the request number it answered, so a stale response can't win.
+  const [result, setResult] = useState<{ req: string; data?: T; error: Error | null }>({ req: '', error: null });
+  const fnRef = useRef(fn);
+  useEffect(() => {
+    fnRef.current = fn;
+  });
+  // A new request number whenever any input changes; "loading" = result lags behind it.
+  const depsKey = JSON.stringify(deps);
+  const req = useMemo(() => `${version}:${tick}:${now.getTime()}:${session?.user.id ?? ''}:${backend.kind}:${depsKey}`, [backend, session, now, version, tick, depsKey]);
+
+  useEffect(() => {
+    if (!session) return;
+    let alive = true;
+    const t0 = Date.now();
+    fnRef
+      .current(backend, session, now)
+      .then((data) => {
+        if (!alive) return;
+        setResult({ req, data, error: null });
+        log.metric('load_ms', Date.now() - t0, { backend: backend.kind });
+      })
+      .catch((e) => {
+        if (!alive) return;
+        const err = toBackendError(e);
+        log.error('load.failed', err);
+        setResult((r) => ({ req, data: r.data, error: err }));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [backend, session, now, req]);
+
+  return { data: result.data, error: result.req === req ? result.error : null, loading: result.req !== req, reload: () => setTick((n) => n + 1) };
 }
 
 /** Record that the signed-in user viewed someone's data (once per subject). */

@@ -1,0 +1,35 @@
+# Supabase CLI config for local development (`supabase start`) and `supabase db push`.
+project_id = "earlysignal"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 500
+
+[db]
+port = 54322
+major_version = 17
+
+[auth]
+enabled = true
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["http://localhost:8081", "https://angelaaaateng.github.io/earlysignal-nvs/"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+otp_length = 6
+otp_expiry = 600
+max_frequency = "1m0s"
+
+[auth.rate_limit]
+email_sent = 10
+sign_in_sign_ups = 30
+token_verifications = 30

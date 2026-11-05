@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useApp } from '@/data/AppStore';
-import { toggleQuestStep } from '@/domain/mutations';
+import { Loading, LoadError } from '@/ui/Loading';
 import { Icon } from '@/ui/Icon';
 import { Pip } from '@/ui/Pip';
 import { BackButton, goBack, Screen } from '@/ui/Screen';
@@ -18,8 +18,11 @@ const CIRC = 2 * Math.PI * R;
 
 /** Canvas S4 · Student: focus sprint. */
 export default function Focus() {
-  const h = useStudentHome();
+  const { data: h, error, reload } = useStudentHome();
   const { quest: questId } = useLocalSearchParams<{ quest?: string }>();
+  if (!h) {
+    return <Screen bg={C.burrowDeep}>{error ? <LoadError dark error={error} retry={reload} /> : <Loading dark />}</Screen>;
+  }
   const q = h.open.find((x) => x.id === questId) ?? h.open.find((x) => x.id === h.activeQuestId) ?? h.open[0];
   const step = q && q.nextStep >= 0 ? q.steps[q.nextStep] : undefined;
 
@@ -36,10 +39,10 @@ export default function Focus() {
   }
 
   // Keyed by step: a new step starts a fresh timer.
-  return <Sprint key={step.id} q={q} step={step} studentId={h.studentId} />;
+  return <Sprint key={step.id} q={q} step={step} />;
 }
 
-function Sprint({ q, step, studentId }: { q: QuestView; step: StepView; studentId: string }) {
+function Sprint({ q, step }: { q: QuestView; step: StepView }) {
   const { act } = useApp();
   const total = Math.min(MAX_SPRINT_MIN, step.minutes) * 60;
   const [left, setLeft] = useState(total);
@@ -57,8 +60,8 @@ function Sprint({ q, step, studentId }: { q: QuestView; step: StepView; studentI
   const ss = String(left % 60).padStart(2, '0');
   const status = left === 0 ? 'Time’s up. Pip calls a break.' : paused ? 'Paused. Take a breath.' : 'Pip is studying with you';
 
-  const finish = () => {
-    act('focus.step.finish', (db, now) => toggleQuestStep(db, studentId, step.id, now), { stepId: step.id });
+  const finish = async () => {
+    await act('focus.step.finish', (b, s) => b.toggleQuestStep(s, step.id), { stepId: step.id }).catch(() => {});
     router.replace('/student');
   };
 
@@ -127,7 +130,7 @@ function Sprint({ q, step, studentId }: { q: QuestView; step: StepView; studentI
         <Pressable accessibilityRole="button" onPress={() => setPaused((p) => !p)} style={styles.pause}>
           <Text style={[body(800), { fontSize: 16, color: C.cream }]}>{paused ? 'Resume' : 'Pause'}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={finish} style={styles.done}>
+        <Pressable accessibilityRole="button" onPress={() => void finish()} style={styles.done}>
           <Text style={[body(800), { fontSize: 16, color: C.ink }]}>I finished this step</Text>
         </Pressable>
       </View>

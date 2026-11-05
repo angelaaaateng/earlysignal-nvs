@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useApp, useAuditView } from '@/data/AppStore';
-import { sendCheer } from '@/domain/mutations';
-import { parentWeeklySummary } from '@/domain/parent';
+import { useApp, useAuditView, useLoad } from '@/data/AppStore';
+import type { ParentWeeklySummary } from '@/domain/parent';
+import { Loading, LoadError } from '@/ui/Loading';
 import { useParent } from '@/ui/parent';
 import { ParentNav, Screen } from '@/ui/Screen';
 import { body, C, display } from '@/ui/theme';
@@ -11,15 +11,21 @@ import { WeeklySummary } from '@/ui/WeeklySummary';
 
 /** Canvas P1 · Parent: weekly summary. Shows only what the student shares. */
 export default function ParentSummary() {
-  const { me, studentId } = useParent();
-  const { db, now, act } = useApp();
+  const { studentId, kidsLoaded } = useParent();
+  const { act } = useApp();
   const [sent, setSent] = useState(false);
-  const s = useMemo(() => (studentId ? parentWeeklySummary(db, me.id, studentId, now) : undefined), [db, me.id, studentId, now]);
+  const sum = useLoad<ParentWeeklySummary | undefined>((b, sess, now) => (studentId ? b.parentWeeklySummary(sess, studentId, now) : Promise.resolve(undefined)), [studentId]);
   useAuditView('parent.summary.view', studentId);
+  const s = sum.data;
+  const pending = !kidsLoaded || (studentId && sum.loading && !s);
 
   return (
     <Screen bg={C.paperParent} footer={<ParentNav active="Summary" />} contentStyle={{ paddingTop: 26, gap: 12 }}>
-      {s ? (
+      {pending ? (
+        <Loading />
+      ) : sum.error ? (
+        <LoadError error={sum.error} retry={sum.reload} />
+      ) : s ? (
         <>
           <WeeklySummary s={s} />
           <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -27,8 +33,8 @@ export default function ParentSummary() {
               accessibilityRole="button"
               disabled={sent}
               onPress={() => {
-                act('cheer.send', (d, t) => sendCheer(d, me.id, s.studentId, t));
                 setSent(true);
+                void act('cheer.send', (b, sess) => b.sendCheer(sess, s.studentId)).catch(() => setSent(false));
               }}
               style={[styles.cheer, { backgroundColor: sent ? C.greenSoft : C.greenParent }]}
             >

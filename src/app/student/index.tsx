@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
-import { toggleQuestStep } from '@/domain/mutations';
+import { Loading, LoadError } from '@/ui/Loading';
 import { Acorn, Flame, Icon } from '@/ui/Icon';
 import { Pip } from '@/ui/Pip';
 import { Screen, StudentNav } from '@/ui/Screen';
@@ -10,8 +10,15 @@ import { body, C, display, eyebrow } from '@/ui/theme';
 
 /** Canvas S1 · Student: the Burrow (home). */
 export default function Burrow() {
-  const h = useStudentHome();
+  const { data: h, error, reload } = useStudentHome();
   const { act } = useApp();
+  if (!h) {
+    return (
+      <Screen bg={C.paper} footer={<StudentNav active="Burrow" />}>
+        {error ? <LoadError error={error} retry={reload} /> : <Loading />}
+      </Screen>
+    );
+  }
   const checkedIn = h.todayScore !== undefined;
 
   return (
@@ -82,7 +89,7 @@ export default function Burrow() {
             key={q.id}
             q={q}
             active={q.id === h.activeQuestId}
-            onToggle={() => act('quest.step.toggle', (db, now) => toggleQuestStep(db, h.studentId, q.steps[0].id, now), { stepId: q.steps[0].id })}
+            onToggle={() => void act('quest.step.toggle', (b, s) => b.toggleQuestStep(s, q.steps[0].id), { stepId: q.steps[0].id })}
           />
         ))}
       </View>

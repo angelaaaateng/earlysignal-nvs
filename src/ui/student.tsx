@@ -1,15 +1,13 @@
-import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useApp, useViewer } from '@/data/AppStore';
-import { studentHome, type QuestView } from '@/domain/student';
+import { useLoad, useSession } from '@/data/AppStore';
+import type { QuestView, StudentHome } from '@/domain/student';
 import { Icon } from './Icon';
 import { body, C } from './theme';
 
-/** The signed-in student's own view, recomputed as data changes. */
+/** The signed-in student's own view, reloaded after every write. */
 export function useStudentHome() {
-  const me = useViewer('student');
-  const { db, now } = useApp();
-  return useMemo(() => studentHome(db, me.id, now), [db, me.id, now]);
+  useSession('student');
+  return useLoad<StudentHome>((b, s, now) => b.studentHome(s, now));
 }
 
 /** Checkbox square from the canvas: green filled when done, outlined otherwise. */

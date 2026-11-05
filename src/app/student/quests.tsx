@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
 import { weekdayLong } from '@/domain/dates';
-import { toggleQuestStep } from '@/domain/mutations';
+import { Loading, LoadError } from '@/ui/Loading';
 import { splitReason, type QuestView } from '@/domain/student';
 import { Icon } from '@/ui/Icon';
 import { Screen, StudentNav } from '@/ui/Screen';
@@ -11,10 +11,17 @@ import { body, C, display, eyebrow } from '@/ui/theme';
 
 /** Canvas S3 · Student: quest planner. */
 export default function Quests() {
-  const h = useStudentHome();
+  const { data: h, error, reload } = useStudentHome();
   const { act } = useApp();
+  if (!h) {
+    return (
+      <Screen bg={C.paper} footer={<StudentNav active="Quests" />}>
+        {error ? <LoadError error={error} retry={reload} /> : <Loading />}
+      </Screen>
+    );
+  }
   const [featured, ...rest] = h.open;
-  const toggle = (stepId: string) => act('quest.step.toggle', (db, now) => toggleQuestStep(db, h.studentId, stepId, now), { stepId });
+  const toggle = (stepId: string) => void act('quest.step.toggle', (b, s) => b.toggleQuestStep(s, stepId), { stepId });
 
   return (
     <Screen bg={C.paper} footer={<StudentNav active="Quests" />} contentStyle={{ paddingTop: 28, gap: 14 }}>

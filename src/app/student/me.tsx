@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
-import { setSharing } from '@/domain/mutations';
+import { Loading, LoadError } from '@/ui/Loading';
 import type { SharingKey } from '@/domain/types';
 import { Icon } from '@/ui/Icon';
 import { Screen, StudentNav } from '@/ui/Screen';
@@ -17,8 +17,15 @@ const ROWS: { key: SharingKey; label: string; sub: string }[] = [
 
 /** Canvas S5 · Student: what's shared. The student is the only one who can change these. */
 export default function Me() {
-  const h = useStudentHome();
+  const { data: h, error, reload } = useStudentHome();
   const { act, signOut } = useApp();
+  if (!h) {
+    return (
+      <Screen bg={C.paper} footer={<StudentNav active="Me" />}>
+        {error ? <LoadError error={error} retry={reload} /> : <Loading />}
+      </Screen>
+    );
+  }
   const who = h.parentLabel;
 
   return (
@@ -47,7 +54,7 @@ export default function Me() {
                 accessibilityState={{ checked: on }}
                 aria-checked={on}
                 accessibilityLabel={r.label}
-                onPress={() => act('sharing.update', (db, now) => setSharing(db, h.studentId, h.studentId, r.key, !on, now), { key: r.key, value: !on })}
+                onPress={() => void act('sharing.update', (b, s) => b.setSharing(s, r.key, !on), { key: r.key, value: !on })}
                 style={styles.switchHit}
               >
                 <View style={[styles.track, { backgroundColor: on ? C.green : C.faint, justifyContent: on ? 'flex-end' : 'flex-start' }]}>
@@ -80,7 +87,7 @@ export default function Me() {
         <Pressable accessibilityRole="link" onPress={() => router.push('/student/preview')} style={{ minHeight: 44, justifyContent: 'center' }}>
           <Text style={[body(800), { fontSize: 15, color: C.rust }]}>Preview {who}’s Friday summary →</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={signOut} style={{ minHeight: 44, justifyContent: 'center' }}>
+        <Pressable accessibilityRole="button" onPress={() => void signOut()} style={{ minHeight: 44, justifyContent: 'center' }}>
           <Text style={[body(700), { fontSize: 14, color: C.muted }]}>Sign out</Text>
         </Pressable>
       </View>

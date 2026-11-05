@@ -6,12 +6,14 @@
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
     "@expo-google-fonts/nunito-sans": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@supabase/supabase-js": "^2.119.0",
     "expo": "~58.0.23",
     "expo-clipboard": "~58.0.4",
     "expo-constants": "~58.0.15",
     "expo-font": "~58.0.11",
     "expo-linking": "~58.0.16",
     "expo-router": "~58.0.30",
+    "expo-sqlite": "~58.0.15",
     "expo-status-bar": "~58.0.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -24,11 +26,13 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/jest": "30.0.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "~19.3.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.4",
     "jest": "~30.5.2",
     "jest-expo": "~58.0.14",
+    "pg": "^8.23.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -44,15 +48,18 @@
     "test:e2e": "playwright test",
     "walkthrough": "node scripts/walkthrough.mjs",
     "icons": "node scripts/make-icons.mjs",
-    "check": "npm run typecheck && npm run lint && npm test",
-    "deploy:pages": "node scripts/deploy-gh-pages.mjs"
+    "check": "npm run typecheck && npm run lint && npm test && npm run test:db",
+    "deploy:pages": "node scripts/deploy-gh-pages.mjs",
+    "test:db": "jest --config jest.db.config.js",
+    "db:local": "bash scripts/db-local.sh"
   },
   "private": true,
   "jest": {
     "preset": "jest-expo",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/e2e/"
+      "/e2e/",
+      "/supabase/"
     ]
   }
 }

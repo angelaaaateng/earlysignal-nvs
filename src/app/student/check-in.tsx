@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useApp } from '@/data/AppStore';
-import { submitCheckIn } from '@/domain/mutations';
-import { CHECK_IN_LEVELS, ownNoteForToday } from '@/domain/student';
+import { useApp, useLoad } from '@/data/AppStore';
+import { CHECK_IN_LEVELS } from '@/domain/student';
+import { Loading, LoadError } from '@/ui/Loading';
 import type { CheckInScore } from '@/domain/types';
 import { Pip } from '@/ui/Pip';
 import { BackButton, goBack, Screen } from '@/ui/Screen';
@@ -12,17 +12,34 @@ import { body, C, display, eyebrow } from '@/ui/theme';
 
 /** Canvas S2 · Student: daily check-in. */
 export default function CheckInScreen() {
-  const h = useStudentHome();
-  const { act, db, now } = useApp();
-  const [picked, setPicked] = useState<CheckInScore | undefined>(h.todayScore);
-  const [note, setNote] = useState(() => ownNoteForToday(db, h.studentId, now));
-  const cur = picked ? CHECK_IN_LEVELS[picked - 1] : undefined;
-  const firstToday = h.todayScore === undefined;
+  const { data: h, error, reload } = useStudentHome();
+  const note0 = useLoad((b, s, now) => b.ownNoteForToday(s, now));
+  if (!h || note0.data === undefined) {
+    return <Screen bg={C.paper}>{error ? <LoadError error={error} retry={reload} /> : <Loading />}</Screen>;
+  }
+  return <CheckInForm key={`${h.todayScore ?? ''}:${note0.data}`} todayScore={h.todayScore} initialNote={note0.data} />;
+}
 
-  const submit = () => {
-    if (!picked) return;
-    act('checkin.submit', (d, t) => submitCheckIn(d, h.studentId, picked, note, t), { score: picked, hasNote: note.trim().length > 0 });
-    router.replace('/student/quests');
+function CheckInForm({ todayScore, initialNote }: { todayScore?: CheckInScore; initialNote: string }) {
+  const { act } = useApp();
+  const [picked, setPicked] = useState<CheckInScore | undefined>(todayScore);
+  const [note, setNote] = useState(initialNote);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const cur = picked ? CHECK_IN_LEVELS[picked - 1] : undefined;
+  const firstToday = todayScore === undefined;
+
+  const submit = async () => {
+    if (!picked || busy) return;
+    setBusy(true);
+    setErr('');
+    try {
+      await act('checkin.submit', (b, s) => b.submitCheckIn(s, picked, note), { score: picked, hasNote: note.trim().length > 0 });
+      router.replace('/student/quests');
+    } catch (e) {
+      setErr((e as Error).message);
+      setBusy(false);
+    }
   };
 
   return (
@@ -83,13 +100,14 @@ export default function CheckInScreen() {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityState={{ disabled: !picked }}
-        disabled={!picked}
-        onPress={submit}
-        style={[styles.cta, !picked && { opacity: 0.5 }]}
+        accessibilityState={{ disabled: !picked || busy }}
+        disabled={!picked || busy}
+        onPress={() => void submit()}
+        style={[styles.cta, (!picked || busy) && { opacity: 0.5 }]}
       >
-        <Text style={[body(800), { fontSize: 17, color: C.cream }]}>{cur?.cta ?? 'Pick a number first'}</Text>
+        <Text style={[body(800), { fontSize: 17, color: C.cream }]}>{busy ? 'Saving…' : cur?.cta ?? 'Pick a number first'}</Text>
       </Pressable>
+      {!!err && <Text accessibilityRole="alert" style={[body(700), { fontSize: 13, color: C.rustDeep, textAlign: 'center' }]}>{err}</Text>}
       <Text style={[body(400), { fontSize: 13, color: C.muted, textAlign: 'center' }]}>
         {firstToday ? '+5 acorns · your streak stays safe' : 'Already checked in today · your streak is safe'}
       </Text>
