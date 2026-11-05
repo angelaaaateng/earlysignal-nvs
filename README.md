@@ -34,7 +34,7 @@ It then opens full screen with its own icon, keeps its data between launches, an
 
 Pieces: `public/manifest.json`, `public/index.html` (iOS home-screen tags, `viewport-fit=cover` for the notch), `public/sw.js` + `scripts/postbuild-web.mjs` (per-build cache name and precache list), icons generated from Pip by `npm run icons`.
 
-**Hosting:** any static host that serves `dist/` with a fallback to `index.html`. `vercel.json` is ready (build command, SPA rewrites, security and cache headers). Not deployed yet.
+**Live:** https://angelaaaateng.github.io/earlysignal-nvs/ (GitHub Pages, from the `gh-pages` branch; `.github/workflows/pages.yml` redeploys on every push to `main`). `vercel.json` is also ready for a Vercel deploy at the site root.
 
 ## Observability and logging
 
