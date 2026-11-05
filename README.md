@@ -38,7 +38,7 @@ Pieces: `public/manifest.json`, `public/index.html` (iOS home-screen tags, `view
 
 **Live, two deployments:**
 - **Demo (mock data):** https://angelaaaateng.github.io/earlysignal-nvs/ (GitHub Pages; redeploys on every push to `main`). The role cards open example accounts.
-- **Real accounts (Supabase):** https://earlysignal-nvs.vercel.app (Vercel; `vercel.json` sets the Supabase URL and publishable key at build time). Parents sign up by email code; students with family code + PIN; admins by invite.
+- **Real accounts (Supabase):** https://earlysignal-nvs.vercel.app (Vercel; `vercel.json` sets the Supabase URL and publishable key at build time). Parents sign up by email or Google; a parent's tap signs their child in; admins by invite.
 
 ## Observability and logging
 
@@ -69,7 +69,7 @@ Pieces: `public/manifest.json`, `public/index.html` (iOS home-screen tags, `view
 | Who | Sign-in | Account comes from |
 |---|---|---|
 | Parent | Email + one-time code (no password) | Entering an email the first time. A trigger creates the parent row and their family. |
-| Student | Family code + first name + PIN. Never an email. | The parent, from the Account tab. Under 13 → consent recorded first, or `create_student()` refuses. |
+| Student | Nothing to type. The parent taps **Open [child]'s Burrow** on the Account tab; a 10-minute single-use token signs the child in on that device. | The parent, from the Account tab. Under 13 → consent recorded first, or `create_student()` refuses. |
 | Admin | Email + one-time code | Invite only: an `admin_invites` row must exist for the email (see `supabase/seed`). |
 
 **Where the four rules live in the database**
