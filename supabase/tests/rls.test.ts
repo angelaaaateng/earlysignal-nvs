@@ -265,3 +265,13 @@ describeDb('Supabase schema: rules enforced in the database', () => {
     });
   });
 });
+
+describeDb('Anonymous callers', () => {
+  it('cannot read a summary, a streak or admin rows, and cannot write', async () => {
+    await expect(call(null, `select public.parent_weekly_summary($1)`, [ids.ines])).rejects.toThrow();
+    await expect(call(null, `select public.current_streak($1)`, [ids.ines])).rejects.toThrow();
+    await expect(rows(null, `select * from public.admin_family_rows()`)).rejects.toThrow();
+    await expect(call(null, `select public.submit_check_in(3::smallint, '')`)).rejects.toThrow();
+    await expect(call(null, `select public.create_student($1, 'X', 'Y', '2010-01-01', 5::smallint, '1234')`, [ids.family])).rejects.toThrow();
+  });
+});

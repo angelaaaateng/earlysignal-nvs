@@ -21,7 +21,14 @@ create table auth.users (
   raw_app_meta_data jsonb default '{}'::jsonb,
   raw_user_meta_data jsonb default '{}'::jsonb,
   created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  updated_at timestamptz default now(),
+  confirmation_token text, recovery_token text, email_change_token_new text, email_change text,
+  email_change_token_current text, phone_change text, phone_change_token text, reauthentication_token text,
+  is_sso_user boolean default false, is_anonymous boolean default false
+);
+create table auth.identities (
+  id uuid primary key, user_id uuid references auth.users (id) on delete cascade, provider_id text, provider text,
+  identity_data jsonb, created_at timestamptz, updated_at timestamptz, last_sign_in_at timestamptz
 );
 
 -- Supabase reads the request's JWT from the `request.jwt.claims` setting.

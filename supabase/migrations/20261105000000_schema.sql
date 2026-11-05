@@ -202,10 +202,24 @@ create index on public.audit_log (actor_id, at desc);
 -- -------------------------------------------------------- role helpers ---
 -- All stable, security definer, with a pinned search_path, so policies can
 -- call them without recursing into RLS.
+-- Fails closed: an unauthenticated caller, or one with no account row, is refused.
 create or replace function public.my_role() returns public.user_role
-language sql stable security definer set search_path = '' as $$
-  select role from public.users where id = auth.uid()
-$$;
+language plpgsql stable security definer set search_path = '' as $$
+declare r public.user_role;
+begin
+  if auth.uid() is null then raise exception 'ACCESS_DENIED: sign in first'; end if;
+  select role into r from public.users where id = auth.uid();
+  if r is null then raise exception 'ACCESS_DENIED: no account'; end if;
+  return r;
+end $$;
+
+create or replace function public.require_user() returns uuid
+language plpgsql stable security definer set search_path = '' as $$
+declare u uuid := auth.uid();
+begin
+  if u is null then raise exception 'ACCESS_DENIED: sign in first'; end if;
+  return u;
+end $$;
 
 create or replace function public.is_parent_of(student uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
@@ -447,13 +461,22 @@ begin
   end if;
 
   -- Auth user with a synthetic, undeliverable email: students never get mail.
+  -- The auth service expects empty strings, not NULLs, in its token columns.
   insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
-                          raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+                          raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+                          confirmation_token, recovery_token, email_change_token_new, email_change,
+                          email_change_token_current, phone_change, phone_change_token, reauthentication_token,
+                          is_sso_user, is_anonymous)
   values (sid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
           lower(fam.join_code) || '+' || sid::text || '@students.earlysignal.invalid',
           extensions.crypt(p_pin, extensions.gen_salt('bf')), now(),
           jsonb_build_object('provider', 'email', 'providers', array['email'], 'role', 'student', 'family_id', fam.id),
-          jsonb_build_object('display_name', trim(p_first_name)), now(), now());
+          jsonb_build_object('display_name', trim(p_first_name)), now(), now(),
+          '', '', '', '', '', '', '', '', false, false);
+  insert into auth.identities (id, user_id, provider_id, provider, identity_data, created_at, updated_at, last_sign_in_at)
+  values (gen_random_uuid(), sid, sid::text, 'email',
+          jsonb_build_object('sub', sid::text, 'email', lower(fam.join_code) || '+' || sid::text || '@students.earlysignal.invalid', 'email_verified', true),
+          now(), now(), now());
   insert into public.users (id, role, display_name, birth_date, grade)
   values (sid, 'student', trim(p_first_name || ' ' || p_last_name), p_birth_date, p_grade);
   insert into public.family_students (family_id, user_id) values (fam.id, sid);
@@ -572,10 +595,11 @@ end $$;
 -- Parent weekly summary. Returns only shared fields; per-day scores never
 -- appear (weekly averages only). Mirrors src/domain/parent.ts.
 create or replace function public.parent_weekly_summary(p_student_id uuid, p_today date default current_date) returns jsonb
-language plpgsql stable security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $$
 declare
   sh public.sharing_settings; out jsonb; mon date; fri date; w jsonb; cur numeric; base numeric; run int := 0;
 begin
+  perform public.require_user();
   if not (public.is_parent_of(p_student_id) or auth.uid() = p_student_id) then raise exception 'ACCESS_DENIED'; end if;
   sh := public.sharing_of(p_student_id);
   mon := p_today - ((extract(isodow from p_today)::int) - 1);
@@ -630,6 +654,8 @@ create or replace function public.current_streak(p_student_id uuid, p_today date
 language plpgsql stable security definer set search_path = '' as $$
 declare d date; n int := 0;
 begin
+  perform public.require_user();
+  if not (auth.uid() = p_student_id or public.is_parent_of(p_student_id) or public.admin_can_see_student(p_student_id)) then raise exception 'ACCESS_DENIED'; end if;
   d := case when exists (select 1 from public.check_ins where student_id = p_student_id and date = p_today) then p_today else p_today - 1 end;
   while exists (select 1 from public.check_ins where student_id = p_student_id and date = d) loop
     n := n + 1; d := d - 1;
@@ -640,7 +666,7 @@ end $$;
 -- Admin: one row per visible student with a derived pattern. Conclusions only.
 create or replace function public.admin_family_rows(p_today date default current_date)
 returns table (student_id uuid, family_id uuid, name text, grade smallint, pattern text, status text, flag boolean, action text, shares text[], coach_suggested boolean)
-language plpgsql stable security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $$
 begin
   if public.my_role() <> 'admin' then raise exception 'ACCESS_DENIED: admins only'; end if;
   perform public.log_event('admin.dashboard.view', (select org_id from public.users where id = auth.uid()), null);
@@ -704,6 +730,15 @@ language sql stable security definer set search_path = '' as $$
   from weeks w where public.my_role() = 'admin' order by w.ws
 $$;
 
+-- ---------------------------------------------------------- API surface ---
+-- `create or replace function` resets EXECUTE to PUBLIC, so this block must
+-- come last and be re-run after any function change. Anonymous callers get
+-- exactly one function: the student sign-in lookup.
+revoke execute on all functions in schema public from public, anon;
 grant execute on all functions in schema public to authenticated;
-revoke execute on function public.insert_family() from authenticated, anon;
-revoke execute on function public.log_event(text, uuid, jsonb) from authenticated, anon;
+-- RLS policies run as the caller and use the yes/no helpers, so those stay
+-- executable by signed-in users. These three never are:
+revoke execute on function public.log_event(text, uuid, jsonb) from authenticated;
+revoke execute on function public.insert_family() from authenticated;
+revoke execute on function public.handle_new_auth_user() from authenticated;
+grant execute on function public.student_login_email(text, text) to anon;
