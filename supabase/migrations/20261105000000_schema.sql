@@ -200,6 +200,20 @@ create index on public.quest_steps (quest_id);
 create index on public.acorns (student_id);
 create index on public.referrals (org_id, status);
 create index on public.audit_log (actor_id, at desc);
+create index on public.audit_log (subject_id);
+create index on public.users (org_id);
+create index on public.families (org_id);
+create index on public.family_parents (user_id);
+create index on public.parental_consents (family_id);
+create index on public.parental_consents (parent_id);
+create index on public.parental_consents (student_id);
+create index on public.private_notes (student_id);
+create index on public.cheers (from_parent_id);
+create index on public.cheers (student_id);
+create index on public.referrals (family_id);
+create index on public.referrals (student_id);
+create index on public.help_contacts (family_id);
+create index on public.admin_invites (org_id);
 
 -- -------------------------------------------------------- role helpers ---
 -- All stable, security definer, with a pinned search_path, so policies can
@@ -301,17 +315,17 @@ create policy orgs_read on public.orgs for select to authenticated using (true);
 
 -- users: self, your family, your opted-in families (admin).
 create policy users_self on public.users for select to authenticated
-  using (id = auth.uid());
+  using (id = (select auth.uid()));
 create policy users_family on public.users for select to authenticated
   using (public.is_parent_of(id) or public.is_parent_in_family_of_student(id));
 create policy users_admin on public.users for select to authenticated
   using (public.admin_can_see_student(id));
 create policy users_update_self on public.users for update to authenticated
-  using (id = auth.uid()) with check (id = auth.uid() and role = public.my_role());
+  using (id = (select auth.uid())) with check (id = (select auth.uid()) and role = public.my_role());
 
 -- families
 create policy families_member on public.families for select to authenticated
-  using (public.is_parent_in_family(id) or id = public.family_of(auth.uid()));
+  using (public.is_parent_in_family(id) or id = public.family_of((select auth.uid())));
 create policy families_admin on public.families for select to authenticated
   using (public.admin_can_see_family(id));
 -- Parents may change opt-in and rotate the join code; nothing else.
@@ -319,9 +333,9 @@ create policy families_parent_update on public.families for update to authentica
   using (public.is_parent_in_family(id)) with check (public.is_parent_in_family(id));
 
 create policy family_parents_member on public.family_parents for select to authenticated
-  using (user_id = auth.uid() or family_id = public.family_of(auth.uid()) or public.is_parent_in_family(family_id));
+  using (user_id = (select auth.uid()) or family_id = public.family_of((select auth.uid())) or public.is_parent_in_family(family_id));
 create policy family_students_member on public.family_students for select to authenticated
-  using (user_id = auth.uid() or public.is_parent_in_family(family_id) or public.admin_can_see_family(family_id));
+  using (user_id = (select auth.uid()) or public.is_parent_in_family(family_id) or public.admin_can_see_family(family_id));
 
 -- consents: parents in the family only. Never students, never admins.
 create policy consents_parent on public.parental_consents for select to authenticated
@@ -330,46 +344,46 @@ create policy consents_parent on public.parental_consents for select to authenti
 -- check_ins: student reads/writes own; parent and admin get aggregates via
 -- functions only (no row-level read), so a per-day score never leaves the DB.
 create policy check_ins_self on public.check_ins for all to authenticated
-  using (student_id = auth.uid()) with check (student_id = auth.uid());
+  using (student_id = (select auth.uid())) with check (student_id = (select auth.uid()));
 
 -- private_notes: THE STUDENT ONLY. No other policy exists, by design.
 create policy private_notes_self on public.private_notes for all to authenticated
-  using (student_id = auth.uid()) with check (student_id = auth.uid());
+  using (student_id = (select auth.uid())) with check (student_id = (select auth.uid()));
 
 -- quests + steps: student owns; parent sees titles only if upcoming_tests is
 -- shared (boss) or quests_finished (completion counts via function); admin via functions.
 create policy quests_self on public.quests for all to authenticated
-  using (student_id = auth.uid()) with check (student_id = auth.uid());
+  using (student_id = (select auth.uid())) with check (student_id = (select auth.uid()));
 create policy quests_parent_tests on public.quests for select to authenticated
   using (kind = 'boss' and public.is_parent_of(student_id) and (public.sharing_of(student_id)).upcoming_tests);
 create policy quest_steps_self on public.quest_steps for all to authenticated
-  using (exists (select 1 from public.quests q where q.id = quest_id and q.student_id = auth.uid()))
-  with check (exists (select 1 from public.quests q where q.id = quest_id and q.student_id = auth.uid()));
+  using (exists (select 1 from public.quests q where q.id = quest_id and q.student_id = (select auth.uid())))
+  with check (exists (select 1 from public.quests q where q.id = quest_id and q.student_id = (select auth.uid())));
 
-create policy acorns_self on public.acorns for select to authenticated using (student_id = auth.uid());
+create policy acorns_self on public.acorns for select to authenticated using (student_id = (select auth.uid()));
 
-create policy sharing_self on public.sharing_settings for select to authenticated using (student_id = auth.uid());
+create policy sharing_self on public.sharing_settings for select to authenticated using (student_id = (select auth.uid()));
 create policy sharing_self_update on public.sharing_settings for update to authenticated
-  using (student_id = auth.uid()) with check (student_id = auth.uid());
+  using (student_id = (select auth.uid())) with check (student_id = (select auth.uid()));
 create policy sharing_parent_read on public.sharing_settings for select to authenticated using (public.is_parent_of(student_id));
 
-create policy cheers_student on public.cheers for select to authenticated using (student_id = auth.uid());
-create policy cheers_parent on public.cheers for select to authenticated using (from_parent_id = auth.uid());
+create policy cheers_student on public.cheers for select to authenticated using (student_id = (select auth.uid()));
+create policy cheers_parent on public.cheers for select to authenticated using (from_parent_id = (select auth.uid()));
 
 create policy referrals_family on public.referrals for select to authenticated
-  using (public.is_parent_of(student_id) or student_id = auth.uid());
+  using (public.is_parent_of(student_id) or student_id = (select auth.uid()));
 create policy referrals_admin on public.referrals for select to authenticated
-  using (public.admin_can_see_family(family_id) and org_id = (select org_id from public.users where id = auth.uid()));
+  using (public.admin_can_see_family(family_id) and org_id = (select org_id from public.users where id = (select auth.uid())));
 
 create policy help_contacts_parent on public.help_contacts for select to authenticated
   using (public.is_parent_in_family(family_id));
 
 -- audit_log: a user may read entries about themself; nobody writes directly.
 create policy audit_self on public.audit_log for select to authenticated
-  using (actor_id = auth.uid() or subject_id = auth.uid());
+  using (actor_id = (select auth.uid()) or subject_id = (select auth.uid()));
 
 create policy admin_invites_self on public.admin_invites for select to authenticated
-  using (lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+  using (lower(email) = lower(coalesce((select auth.jwt()) ->> 'email', '')));
 
 grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;

@@ -143,10 +143,13 @@ export default function SignIn() {
         <View style={{ gap: 12 }}>
           <Text style={eyebrow(C.gold)}>Check your email</Text>
           <Text accessibilityRole="header" style={[display(700), { fontSize: 22, color: C.cream }]}>
-            Enter the code we sent to {email}
+            We sent a sign-in email to {email}
           </Text>
-          <Field label="Code" value={otp} onChange={(v) => setOtp(v.replace(/\D/g, '').slice(0, 8))} placeholder="123456" keyboardType="number-pad" />
-          <Primary label={busy ? 'Signing in…' : 'Sign in'} disabled={busy || otp.length < 6} onPress={codeGo} />
+          <Text style={[body(400), { fontSize: 14, color: C.creamMuted }]}>
+            Tap the link in it on this device, or enter the code if the email has one.
+          </Text>
+          <Field label="Code (if shown)" value={otp} onChange={(v) => setOtp(v.replace(/\D/g, '').slice(0, 8))} placeholder="123456" keyboardType="number-pad" />
+          <Primary label={busy ? 'Signing in…' : 'Sign in with code'} disabled={busy || otp.length < 6} onPress={codeGo} />
           <Pressable accessibilityRole="button" onPress={emailGo} disabled={busy} style={{ minHeight: 44, justifyContent: 'center' }}>
             <Text style={[body(700), { fontSize: 14, color: C.gold }]}>Send a new code</Text>
           </Pressable>
