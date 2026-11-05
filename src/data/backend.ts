@@ -35,6 +35,8 @@ export interface Backend {
   /** Parent or admin, by email. Sends a one-time code; returns nothing. */
   requestEmailCode(email: string): Promise<{ ok: true } | { ok: false; message: string }>;
   verifyEmailCode(email: string, code: string): Promise<SignInResult>;
+  /** Parent or admin via Google. Web redirects away and back; the session is picked up on return. */
+  signInWithGoogle?(): Promise<{ ok: true } | { ok: false; message: string }>;
   /** Student: family code + first name + PIN. Never an email. */
   signInStudent(joinCode: string, firstName: string, pin: string): Promise<SignInResult>;
   /** Mock only: the demo role cards. */

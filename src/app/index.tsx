@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useApp } from '@/data/AppStore';
 import type { Role } from '@/domain/types';
 import { InstallBanner } from '@/pwa/InstallBanner';
@@ -121,6 +122,20 @@ export default function SignIn() {
             {role === 'admin' ? 'Admin accounts are invite-only. Use the email your school or clinic was invited with.' : 'New here? Entering your email creates your parent account. No password to remember.'}
           </Text>
           <Primary label={busy ? 'Sending…' : 'Send code'} disabled={busy || !/^\S+@\S+\.\S+$/.test(email)} onPress={emailGo} />
+          {backend.signInWithGoogle && (
+            <>
+              <Text style={[body(700), { fontSize: 13, color: C.creamMuted, textAlign: 'center' }]}>or</Text>
+              <Pressable
+                accessibilityRole="button"
+                disabled={busy}
+                onPress={() => void go(() => backend.signInWithGoogle!())}
+                style={[styles.google, busy && { opacity: 0.6 }]}
+              >
+                <GoogleMark />
+                <Text style={[body(800), { fontSize: 16, color: C.ink }]}>Continue with Google</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       )}
 
@@ -185,6 +200,18 @@ function RoleCard({ title, sub, icon, variant, onPress, disabled }: { title: str
   );
 }
 
+/** The Google "G" in brand colours. */
+function GoogleMark() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 48 48" aria-hidden>
+      <Path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.5 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
+      <Path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z" />
+      <Path fill="#FBBC05" d="M10.5 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z" />
+      <Path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+    </Svg>
+  );
+}
+
 function Field(props: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; secure?: boolean; keyboardType?: 'email-address' | 'number-pad'; autoCapitalize?: 'none' | 'words' | 'characters' }) {
   return (
     <View style={{ gap: 6 }}>
@@ -218,4 +245,5 @@ const styles = StyleSheet.create({
   chip: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   input: { fontSize: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1.5, borderColor: C.burrowLine, backgroundColor: C.burrowDeep, color: C.cream, minHeight: 48 },
   primary: { backgroundColor: C.gold, borderRadius: 18, padding: 16, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
+  google: { backgroundColor: C.card, borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 48 },
 });

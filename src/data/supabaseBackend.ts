@@ -77,6 +77,13 @@ export class SupabaseBackend implements Backend {
     }
   }
 
+  async signInWithGoogle() {
+    const redirectTo = typeof window !== 'undefined' ? window.location.origin + (process.env.EXPO_PUBLIC_BASE_URL ?? '') + '/' : undefined;
+    const { error } = await this.sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo, queryParams: { prompt: 'select_account' } } });
+    if (error) return { ok: false as const, message: friendlyAuth(error.message) };
+    return { ok: true as const };
+  }
+
   async signInStudent(joinCode: string, firstName: string, pin: string): Promise<SignInResult> {
     const email = unwrap(await this.sb.rpc('student_login_email', { p_join_code: joinCode, p_first_name: firstName })) as string | null;
     if (!email) return { ok: false, message: 'That family code and name don’t match. Ask your parent for the code.' };
