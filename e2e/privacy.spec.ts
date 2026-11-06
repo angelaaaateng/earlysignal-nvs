@@ -38,7 +38,7 @@ test.describe('Rules: sharing and private notes', () => {
   test('the parent sees only what the student shares, the moment it changes', async ({ page }) => {
     await signIn(page, 'student');
     await page.getByRole('tab', { name: 'Me' }).click();
-    await expect(text(page, 'What Mom can see')).toBeVisible();
+    await expect(text(page, 'What Ana can see')).toBeVisible();
     await page.getByRole('switch', { name: 'Weekly mood trend' }).click();
     await page.getByRole('switch', { name: 'Quests finished' }).click();
     await expect(page.getByRole('switch', { name: 'Weekly mood trend' })).toHaveAttribute('aria-checked', 'false');

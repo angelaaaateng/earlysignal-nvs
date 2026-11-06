@@ -149,10 +149,10 @@ const DESK_UA = devices['Desktop Chrome'].userAgent;
 // ---------------------------------------------------------------- tours ---
 console.log('Recording student…');
 await tour({
-  slug: '1-student', role: 'Student · Maya, 11', layout: 'phone', accent: '#E8B23A', ua: IPHONE_UA,
+  slug: '1-student', role: 'Student · Maya, 13', layout: 'phone', accent: '#E8B23A', ua: IPHONE_UA,
   steps: [
     { title: 'Install it from Safari or Chrome', text: 'No app store. On iPhone: Share → Add to Home Screen. On Android or desktop Chrome: tap Install. It opens full screen, with its own icon, and works offline.' },
-    { title: 'Pick who’s signing in', text: 'One app, three roles. Each role only reaches its own screens, even by typed URL.', do: async ({ t }) => t('Who’s signing in?').scrollIntoViewIfNeeded() },
+    { title: 'Students sign up on their own', text: 'Username + password, no email. Parents are optional and only ever see what the student shares. In this demo the cards open example accounts.', do: async ({ t }) => t('Who’s signing in?').scrollIntoViewIfNeeded() },
     { title: 'The Burrow', text: 'Maya’s home: 124 acorns, a 9-day streak, Burrow level 3 and 36 acorns to the garden room. Tonight’s quests sit underneath.', do: async ({ t, tap }) => tap(t('I’m a student')) },
     { title: 'Daily check-in', text: 'One tap: how heavy is today? Nothing is pre-selected, so Pip never suggests an answer.', do: async ({ t, tap }) => tap(t('Check in', { exact: true })) },
     { title: 'Pip reacts to each answer', text: 'The sky over the Burrow changes from sunny to stormy, and Pip’s reply and the next step change with it.', dwell: 900,
@@ -186,20 +186,40 @@ await tour({
     { title: 'A message, drafted for you', text: 'Pick who to contact and EarlySignal drafts the first message. Copy it into email or text.',
       do: async ({ r, tap, wait }) => { await tap(r('radio', { name: /Executive-function coach/ })); await wait(1000); await tap(r('button', { name: 'Copy message' })); } },
     { title: 'Crisis line, always visible', text: 'If a child may be in danger: call or text 988 (U.S.).', do: async ({ t }) => t(/call or text/).scrollIntoViewIfNeeded() },
-    { title: 'Account and consent records', text: 'Each child’s account shows the parental consent on file.', do: async ({ r, tap }) => tap(r('tab', { name: 'Account' })) },
-    { title: 'Add a child', text: 'Parents create student accounts. The child never types anything: the parent taps Open Burrow and the child is in. The birth date is used only to check whether consent is needed.',
-      do: async ({ r, tap, type, app }) => {
-        await tap(r('button', { name: 'Set up a child’s account' }));
+    { title: 'Your kids', text: 'Linked kids, who they sign in as, a password reset (there is no email to reset through), and Unlink. No consent paperwork, no passwords to hand out.', do: async ({ r, tap }) => tap(r('tab', { name: 'Account' })) },
+    { title: 'Reset a forgotten password', text: 'Kids forget. The linked parent sets a new one and tells them. Nothing is emailed anywhere.',
+      do: async ({ r, tap, type, app }) => { await tap(r('button', { name: /Reset Maya’s password/ })); await type(app.getByLabel(/New password for Maya/).filter({ visible: true }).first(), 'NewAcorns2026!'); } },
+    { title: 'Saved', text: 'Maya signs in with the new password next time.', do: async ({ r, tap }) => tap(r('button', { name: 'Save new password' })) },
+  ],
+});
+
+console.log('Recording sign-up and linking…');
+await tour({
+  slug: '5-signup-link', role: 'New student · Sam', layout: 'phone', accent: '#E8B23A', ua: IPHONE_UA,
+  steps: [
+    { title: 'A new student signs up', text: 'Username, password, a name for Pip to use, grade (optional) and “I’m 13 or older”. No email, no parent needed. Thirty seconds.',
+      do: async ({ t, tap, type, app, r }) => {
+        await tap(t('Try a brand-new student account'));
         const f = (l) => app.getByLabel(l).filter({ visible: true }).first();
-        await type(f('First name'), 'Leo'); await type(f('Last name'), 'Santos'); await type(f('Birth date'), '2017-02-10');
+        await type(f('Username'), 'sam_2026'); await type(f('Password'), 'Acorns2026!'); await type(f(/What should Pip call you/), 'Sam'); await type(f(/Grade/), '7');
+        await tap(r('checkbox', { name: 'I’m 13 or older' }));
       } },
-    { title: 'Under 13: consent comes first', text: 'COPPA. A plain-language notice of what’s collected, what stays private and the parent’s rights. No account exists yet.',
-      do: async ({ r, tap }) => tap(r('button', { name: 'Continue' })) },
-    { title: 'Verify and agree', text: 'Choose a verification method and confirm you’re the parent or guardian. (Verification is simulated in this mock build.)',
-      do: async ({ r, tap, wait }) => { await tap(r('radio', { name: /Signed form/ })); await wait(600); await tap(r('checkbox')); } },
-    { title: 'Only then is the account created', text: 'The consent record is written first, then Leo’s account, linked to it. It can’t happen the other way round.',
-      do: async ({ r, tap }) => tap(r('button', { name: 'Give consent and create account' })) },
-    { title: 'Both children, both consents on file', text: 'Leo now appears with his consent record.', do: async ({ r, tap }) => tap(r('button', { name: 'Back to Account' })) },
+    { title: 'An empty Burrow, with a clear next step', text: 'No quests yet, so the Burrow asks for the first one.', do: async ({ r, tap }) => tap(r('button', { name: 'Create my account' })) },
+    { title: 'Add homework', text: 'Type the assignment, pick a type and a due date. Pip previews the split before you add it.',
+      do: async ({ r, tap, type, app }) => { await tap(r('button', { name: /Add your first quest/ })); await type(app.getByLabel('What is it?').filter({ visible: true }).first(), 'Science lab write-up'); await tap(r('radio', { name: 'Writing' })); } },
+    { title: 'Pip splits it into steps', text: 'Three timed steps with hints that nudge, never answer. Tests become boss battles worth 30 acorns.', do: async ({ r, tap }) => tap(r('button', { name: 'Add to my plan' })) },
+    { title: 'Or pick a study habit', text: 'When the plan is thin, a small library of habits: a study spot, 20 minutes of reading, packing the bag tonight.',
+      do: async ({ r, tap, wait }) => { await tap(r('button', { name: 'Add a quest' })); await wait(700); await tap(r('tab', { name: 'Study habits' })); await wait(900); await tap(r('button', { name: /Pack your bag tonight/ })); } },
+    { title: 'Invite a parent, optionally', text: 'On Me: a 6-letter code. The parent signs up and types it. Good for 7 days, one use.',
+      do: async ({ r, tap, wait }) => { await tap(r('tab', { name: 'Me' })); await wait(700); await tap(r('button', { name: 'Add a parent' })); } },
+    { title: 'The parent types the code', text: 'Ana signs in, opens Account, and links Sam. From now on she sees Sam’s weekly summary, built only from what Sam shares.',
+      do: async ({ t, r, tap, type, app, wait }) => {
+        const code = (await t(/^[A-Z2-9]{6}$/).textContent()).trim();
+        await tap(r('button', { name: 'Sign out' })); await wait(800); await tap(t('I’m a parent')); await wait(900);
+        await tap(r('tab', { name: 'Account' })); await wait(700); await tap(r('button', { name: 'Link another kid' })); await wait(500);
+        await type(app.getByLabel('Your kid’s code').filter({ visible: true }).first(), code); await tap(r('button', { name: 'Link', exact: true }));
+      } },
+    { title: 'Two kids, one summary each', text: 'Chips switch between Maya and Sam. Sam has one check-in to show so far.', do: async ({ r, tap, wait }) => { await tap(r('tab', { name: 'Summary' })); await wait(800); await tap(r('tab', { name: 'Sam' })); } },
   ],
 });
 
@@ -249,7 +269,7 @@ execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0'
 rmSync(TMP, { recursive: true, force: true });
 
 // README.md
-const title = { '1-student': 'Student', '2-parent': 'Parent', '3-privacy': 'The privacy rules, live', '4-admin': 'Admin (web)' };
+const title = { '1-student': 'Student', '2-parent': 'Parent', '5-signup-link': 'Sign up and link a parent', '3-privacy': 'The privacy rules, live', '4-admin': 'Admin (web)' };
 let md = `# EarlySignal walkthrough\n\nRecorded from the production web build with mock data. Regenerate with \`npm run build:web && npm run walkthrough\`.\n\n`;
 md += `**Full video:** [0-full-walkthrough.mp4](0-full-walkthrough.mp4)\n\n| Point of view | Video |\n|---|---|\n`;
 for (const s of doc) md += `| ${title[s.slug]} | [${s.slug}.mp4](${s.slug}.mp4) |\n`;

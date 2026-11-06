@@ -8,12 +8,13 @@ Recorded from the production web build with mock data. Regenerate with `npm run 
 |---|---|
 | Student | [1-student.mp4](1-student.mp4) |
 | Parent | [2-parent.mp4](2-parent.mp4) |
+| Sign up and link a parent | [5-signup-link.mp4](5-signup-link.mp4) |
 | The privacy rules, live | [3-privacy.mp4](3-privacy.mp4) |
 | Admin (web) | [4-admin.mp4](4-admin.mp4) |
 
 ## Student
 
-_Student · Maya, 11_ · [video](1-student.mp4)
+_Student · Maya, 13_ · [video](1-student.mp4)
 
 ### 1. Install it from Safari or Chrome
 
@@ -21,11 +22,11 @@ No app store. On iPhone: Share → Add to Home Screen. On Android or desktop Chr
 
 <img src="screens/1-student-01.png" alt="Install it from Safari or Chrome" width="300">
 
-### 2. Pick who’s signing in
+### 2. Students sign up on their own
 
-One app, three roles. Each role only reaches its own screens, even by typed URL.
+Username + password, no email. Parents are optional and only ever see what the student shares. In this demo the cards open example accounts.
 
-<img src="screens/1-student-02.png" alt="Pick who’s signing in" width="300">
+<img src="screens/1-student-02.png" alt="Students sign up on their own" width="300">
 
 ### 3. The Burrow
 
@@ -140,41 +141,76 @@ If a child may be in danger: call or text 988 (U.S.).
 
 <img src="screens/2-parent-06.png" alt="Crisis line, always visible" width="300">
 
-### 7. Account and consent records
+### 7. Your kids
 
-Each child’s account shows the parental consent on file.
+Linked kids, who they sign in as, a password reset (there is no email to reset through), and Unlink. No consent paperwork, no passwords to hand out.
 
-<img src="screens/2-parent-07.png" alt="Account and consent records" width="300">
+<img src="screens/2-parent-07.png" alt="Your kids" width="300">
 
-### 8. Add a child
+### 8. Reset a forgotten password
 
-Parents create student accounts. The child never types anything: the parent taps Open Burrow and the child is in. The birth date is used only to check whether consent is needed.
+Kids forget. The linked parent sets a new one and tells them. Nothing is emailed anywhere.
 
-<img src="screens/2-parent-08.png" alt="Add a child" width="300">
+<img src="screens/2-parent-08.png" alt="Reset a forgotten password" width="300">
 
-### 9. Under 13: consent comes first
+### 9. Saved
 
-COPPA. A plain-language notice of what’s collected, what stays private and the parent’s rights. No account exists yet.
+Maya signs in with the new password next time.
 
-<img src="screens/2-parent-09.png" alt="Under 13: consent comes first" width="300">
+<img src="screens/2-parent-09.png" alt="Saved" width="300">
 
-### 10. Verify and agree
 
-Choose a verification method and confirm you’re the parent or guardian. (Verification is simulated in this mock build.)
+## Sign up and link a parent
 
-<img src="screens/2-parent-10.png" alt="Verify and agree" width="300">
+_New student · Sam_ · [video](5-signup-link.mp4)
 
-### 11. Only then is the account created
+### 1. A new student signs up
 
-The consent record is written first, then Leo’s account, linked to it. It can’t happen the other way round.
+Username, password, a name for Pip to use, grade (optional) and “I’m 13 or older”. No email, no parent needed. Thirty seconds.
 
-<img src="screens/2-parent-11.png" alt="Only then is the account created" width="300">
+<img src="screens/5-signup-link-01.png" alt="A new student signs up" width="300">
 
-### 12. Both children, both consents on file
+### 2. An empty Burrow, with a clear next step
 
-Leo now appears with his consent record.
+No quests yet, so the Burrow asks for the first one.
 
-<img src="screens/2-parent-12.png" alt="Both children, both consents on file" width="300">
+<img src="screens/5-signup-link-02.png" alt="An empty Burrow, with a clear next step" width="300">
+
+### 3. Add homework
+
+Type the assignment, pick a type and a due date. Pip previews the split before you add it.
+
+<img src="screens/5-signup-link-03.png" alt="Add homework" width="300">
+
+### 4. Pip splits it into steps
+
+Three timed steps with hints that nudge, never answer. Tests become boss battles worth 30 acorns.
+
+<img src="screens/5-signup-link-04.png" alt="Pip splits it into steps" width="300">
+
+### 5. Or pick a study habit
+
+When the plan is thin, a small library of habits: a study spot, 20 minutes of reading, packing the bag tonight.
+
+<img src="screens/5-signup-link-05.png" alt="Or pick a study habit" width="300">
+
+### 6. Invite a parent, optionally
+
+On Me: a 6-letter code. The parent signs up and types it. Good for 7 days, one use.
+
+<img src="screens/5-signup-link-06.png" alt="Invite a parent, optionally" width="300">
+
+### 7. The parent types the code
+
+Ana signs in, opens Account, and links Sam. From now on she sees Sam’s weekly summary, built only from what Sam shares.
+
+<img src="screens/5-signup-link-07.png" alt="The parent types the code" width="300">
+
+### 8. Two kids, one summary each
+
+Chips switch between Maya and Sam. Sam has one check-in to show so far.
+
+<img src="screens/5-signup-link-08.png" alt="Two kids, one summary each" width="300">
 
 
 ## The privacy rules, live
