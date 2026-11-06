@@ -774,6 +774,157 @@ begin
   return jsonb_build_object('email', em, 'secret', secret, 'studentId', r.student_id, 'firstName', (select split_part(display_name, ' ', 1) from public.users where id = r.student_id));
 end $$;
 
+-- ------------------------------------------------- v2: students sign up ---
+-- Students (13+) create their own account: username + password, no email.
+-- Parents are optional and link to a student with a code the student shows.
+alter table public.users drop constraint if exists student_has_birth_date;
+alter table public.users add column if not exists username text unique;
+alter table public.users add column if not exists age_attested_at timestamptz;
+
+create or replace function public.sign_up_student(p_username text, p_password text, p_display_name text, p_grade smallint, p_age_attested boolean) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare sid uuid := gen_random_uuid(); uname text := lower(trim(coalesce(p_username, ''))); em text;
+begin
+  if not coalesce(p_age_attested, false) then raise exception 'INVALID: EarlySignal is for ages 13 and up.'; end if;
+  if uname !~ '^[a-z0-9_]{3,20}$' then raise exception 'INVALID: Usernames are 3–20 letters, numbers or underscores.'; end if;
+  if length(coalesce(p_password, '')) < 8 then raise exception 'INVALID: Your password needs at least 8 characters.'; end if;
+  if length(trim(coalesce(p_display_name, ''))) = 0 then raise exception 'INVALID: Tell Pip what to call you.'; end if;
+  if p_grade is not null and (p_grade < 1 or p_grade > 12) then raise exception 'INVALID: Grade must be 1–12.'; end if;
+  if exists (select 1 from public.users where username = uname) then raise exception 'INVALID: That username is taken. Try another.'; end if;
+  em := uname || '@students.earlysignal.invalid';
+  insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
+                          raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+                          confirmation_token, recovery_token, email_change_token_new, email_change,
+                          email_change_token_current, phone_change, phone_change_token, reauthentication_token,
+                          is_sso_user, is_anonymous)
+  values (sid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', em,
+          extensions.crypt(p_password, extensions.gen_salt('bf')), now(),
+          jsonb_build_object('provider', 'email', 'providers', array['email'], 'role', 'student'),
+          jsonb_build_object('display_name', trim(p_display_name)), now(), now(),
+          '', '', '', '', '', '', '', '', false, false);
+  insert into auth.identities (id, user_id, provider_id, provider, identity_data, created_at, updated_at, last_sign_in_at)
+  values (gen_random_uuid(), sid, sid::text, 'email', jsonb_build_object('sub', sid::text, 'email', em, 'email_verified', true), now(), now(), now());
+  insert into public.users (id, role, display_name, grade, username, age_attested_at)
+  values (sid, 'student', trim(p_display_name), p_grade, uname, now());
+  insert into public.sharing_settings (student_id) values (sid);
+  insert into public.audit_log (actor_id, event, subject_id, data) values (sid, 'student.sign_up', sid, jsonb_build_object('grade', p_grade));
+  return jsonb_build_object('email', em, 'studentId', sid);
+end $$;
+
+-- Link codes: the student shows one on screen, the parent types it. 7 days, one use.
+create table if not exists public.parent_link_codes (
+  code text primary key,
+  student_id uuid not null references public.users (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  used_at timestamptz
+);
+alter table public.parent_link_codes enable row level security;
+revoke all on public.parent_link_codes from anon, authenticated;
+
+create or replace function public.create_parent_link_code() returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; c text := ''; i int; exp timestamptz := now() + interval '7 days';
+begin
+  if public.my_role() <> 'student' then raise exception 'ACCESS_DENIED: students only'; end if;
+  delete from public.parent_link_codes where student_id = auth.uid();
+  for i in 1..6 loop c := c || substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1); end loop;
+  insert into public.parent_link_codes (code, student_id, expires_at) values (c, auth.uid(), exp);
+  perform public.log_event('parent.link.create', auth.uid(), null);
+  return jsonb_build_object('code', c, 'expiresAt', exp);
+end $$;
+
+create or replace function public.redeem_parent_link_code(p_code text) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare r public.parent_link_codes; fam uuid; pfam uuid;
+begin
+  if public.my_role() <> 'parent' then raise exception 'ACCESS_DENIED: parents only'; end if;
+  select * into r from public.parent_link_codes where code = upper(regexp_replace(coalesce(p_code, ''), '[^A-Za-z0-9]', '', 'g')) for update;
+  if not found or r.used_at is not null or r.expires_at < now() then
+    raise exception 'INVALID: That code isn’t valid any more. Ask your kid to show you a fresh one.';
+  end if;
+  select family_id into fam from public.family_students where user_id = r.student_id;
+  if fam is null then
+    select family_id into pfam from public.family_parents where user_id = auth.uid() order by family_id limit 1;
+    if pfam is null then
+      pfam := public.insert_family();
+      insert into public.family_parents (family_id, user_id) values (pfam, auth.uid());
+    end if;
+    insert into public.family_students (family_id, user_id) values (pfam, r.student_id);
+  else
+    insert into public.family_parents (family_id, user_id) values (fam, auth.uid()) on conflict do nothing;
+  end if;
+  update public.parent_link_codes set used_at = now() where code = r.code;
+  perform public.log_event('parent.link.redeem', r.student_id, null);
+  return r.student_id;
+end $$;
+
+create or replace function public.unlink_student(p_student_id uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if public.my_role() <> 'parent' or not public.is_parent_of(p_student_id) then raise exception 'ACCESS_DENIED: not this student’s parent'; end if;
+  delete from public.family_students where user_id = p_student_id;
+  perform public.log_event('parent.unlink', p_student_id, null);
+end $$;
+
+-- A linked parent can set a new password for their kid (no email exists to reset through).
+create or replace function public.reset_child_password(p_student_id uuid, p_new_password text) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if public.my_role() <> 'parent' or not public.is_parent_of(p_student_id) then raise exception 'ACCESS_DENIED: not this student’s parent'; end if;
+  if length(coalesce(p_new_password, '')) < 8 then raise exception 'INVALID: The new password needs at least 8 characters.'; end if;
+  update auth.users set encrypted_password = extensions.crypt(p_new_password, extensions.gen_salt('bf')), updated_at = now() where id = p_student_id;
+  perform public.log_event('child.password.reset', p_student_id, null);
+end $$;
+
+-- Names of the parents linked to the calling student (never anything else).
+create or replace function public.my_parents() returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', u.id, 'name', u.display_name)), '[]'::jsonb)
+  from public.family_students fs
+  join public.family_parents fp on fp.family_id = fs.family_id
+  join public.users u on u.id = fp.user_id
+  where fs.user_id = auth.uid()
+$$;
+
+-- Students add their own quests. Steps come from the app's template engine.
+create or replace function public.create_quest(p_title text, p_kind public.quest_kind, p_due_date date, p_acorns smallint, p_teacher text, p_when text, p_reward text, p_steps jsonb) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare qid uuid; s jsonb; i int := 0;
+begin
+  if public.my_role() <> 'student' then raise exception 'ACCESS_DENIED: students only'; end if;
+  if length(trim(coalesce(p_title, ''))) = 0 then raise exception 'INVALID: Give the quest a name.'; end if;
+  if jsonb_typeof(p_steps) <> 'array' or jsonb_array_length(p_steps) = 0 or jsonb_array_length(p_steps) > 8 then raise exception 'INVALID: A quest has 1–8 steps.'; end if;
+  insert into public.quests (student_id, title, kind, due_date, acorns, teacher, "when", reward)
+  values (auth.uid(), trim(p_title), p_kind, p_due_date, least(greatest(coalesce(p_acorns, 5), 0), 500), nullif(trim(coalesce(p_teacher, '')), ''), nullif(trim(coalesce(p_when, '')), ''), nullif(trim(coalesce(p_reward, '')), ''))
+  returning id into qid;
+  for s in select * from jsonb_array_elements(p_steps) loop
+    insert into public.quest_steps (quest_id, "order", label, minutes, hint)
+    values (qid, i, left(coalesce(s ->> 'label', 'Step'), 120), least(greatest(coalesce((s ->> 'minutes')::int, 10), 1), 180), nullif(s ->> 'hint', ''));
+    i := i + 1;
+  end loop;
+  perform public.log_event('quest.create', auth.uid(), jsonb_build_object('questId', qid, 'kind', p_kind, 'steps', i));
+  return qid;
+end $$;
+
+create or replace function public.delete_quest(p_quest_id uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  delete from public.quests where id = p_quest_id and student_id = auth.uid();
+  if not found then raise exception 'ACCESS_DENIED: not your quest'; end if;
+  delete from public.acorns where reason = 'quest' and ref_id = p_quest_id;
+  perform public.log_event('quest.delete', auth.uid(), jsonb_build_object('questId', p_quest_id));
+end $$;
+
+-- Anyone can delete their own account. Cascades through public.users.
+create or replace function public.delete_my_account() returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  perform public.require_user();
+  perform public.log_event('account.delete', auth.uid(), null);
+  delete from auth.users where id = auth.uid();
+end $$;
+
 -- ---------------------------------------------------------- API surface ---
 -- `create or replace function` resets EXECUTE to PUBLIC, so this block must
 -- come last and be re-run after any function change. Anonymous callers get
@@ -786,3 +937,4 @@ revoke execute on function public.log_event(text, uuid, jsonb) from authenticate
 revoke execute on function public.insert_family() from authenticated;
 revoke execute on function public.handle_new_auth_user() from authenticated;
 grant execute on function public.redeem_child_sign_in(text) to anon;
+grant execute on function public.sign_up_student(text, text, text, smallint, boolean) to anon;

@@ -3,6 +3,7 @@ import { assertAdminCanActOn } from './admin';
 import { toDateKey } from './dates';
 import { makeId } from './ids';
 import { ACORNS_PER_CHECK_IN } from './rewards';
+import type { QuestPlan } from './questTemplates';
 import type { CheckInScore, Db, SharingKey } from './types';
 
 /**
@@ -94,5 +95,29 @@ export function adminSuggestCoach(db: Db, adminId: string, studentId: string, no
         createdAt: now.toISOString(),
       },
     ],
+  };
+}
+
+/** A student adds a quest to their own plan. Steps come from `planQuest` or the habit library. */
+export function createQuest(db: Db, studentId: string, plan: QuestPlan, now: Date): { db: Db; questId: string } {
+  requireRole(db, studentId, 'student');
+  if (!plan.title.trim()) throw new Error('Give the quest a name.');
+  if (plan.steps.length === 0 || plan.steps.length > 8) throw new Error('A quest has 1–8 steps.');
+  const questId = makeId('q');
+  const at = now.toISOString();
+  const quest = { id: questId, studentId, title: plan.title.trim(), kind: plan.kind, dueDate: plan.dueDate, teacher: plan.teacher, acorns: plan.acorns, when: plan.when, reward: plan.reward, createdAt: at };
+  const steps = plan.steps.map((s, i) => ({ id: makeId('step'), questId, order: i, label: s.label, minutes: Math.min(180, Math.max(1, s.minutes)), hint: s.hint }));
+  return { db: { ...db, quests: [...db.quests, quest], questSteps: [...db.questSteps, ...steps] }, questId };
+}
+
+export function deleteQuest(db: Db, studentId: string, questId: string): Db {
+  requireRole(db, studentId, 'student');
+  const quest = db.quests.find((q) => q.id === questId);
+  if (!quest || quest.studentId !== studentId) throw new AccessDenied('Not your quest');
+  return {
+    ...db,
+    quests: db.quests.filter((q) => q.id !== questId),
+    questSteps: db.questSteps.filter((s) => s.questId !== questId),
+    acorns: db.acorns.filter((a) => !(a.reason === 'quest' && a.refId === questId)),
   };
 }

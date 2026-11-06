@@ -25,15 +25,26 @@ export default function Quests() {
 
   return (
     <Screen bg={C.paper} footer={<StudentNav active="Quests" />} contentStyle={{ paddingTop: 28, gap: 14 }}>
-      <View style={{ gap: 2 }}>
-        <Text style={eyebrow(C.rust)}>Tonight’s plan · about {h.tonightMinutes} min</Text>
-        <Text accessibilityRole="header" style={[display(800), { fontSize: 28, color: C.ink }]}>
-          Quests
-        </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <View style={{ gap: 2 }}>
+          <Text style={eyebrow(C.rust)}>Tonight’s plan · about {h.tonightMinutes} min</Text>
+          <Text accessibilityRole="header" style={[display(800), { fontSize: 28, color: C.ink }]}>
+            Quests
+          </Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Add a quest" onPress={() => router.push('/student/add-quest')} style={styles.add}>
+          <Text style={[body(800), { fontSize: 14, color: C.card }]}>+ Add</Text>
+        </Pressable>
       </View>
 
       {featured ? (
-        <Featured q={featured} reason={featured.steps.length > 1 ? splitReason(h.todayScore) : undefined} onToggle={toggle} />
+        <Featured q={featured} reason={featured.steps.length > 1 ? splitReason(h.todayScore) : undefined} onToggle={toggle} onRemove={() => void act('quest.delete', (b, s) => b.deleteQuest(s, featured.id), { questId: featured.id })} />
+      ) : h.tonight.length === 0 && !h.boss ? (
+        <Pressable accessibilityRole="button" onPress={() => router.push('/student/add-quest')} style={[styles.featured, { borderColor: C.line, borderWidth: 1.5, borderStyle: 'dashed' }]}>
+          <Text style={[display(700), { fontSize: 20, color: C.ink }]}>Your plan is empty</Text>
+          <Text style={[body(400), { fontSize: 14, color: C.muted }]}>Add tonight’s homework, or pick a study habit from the library. Pip handles the splitting.</Text>
+          <Text style={[body(800), { fontSize: 15, color: C.rust }]}>Add a quest →</Text>
+        </Pressable>
       ) : (
         <View style={[styles.featured, { borderColor: C.line, borderWidth: 1 }]}>
           <Text style={[display(700), { fontSize: 20, color: C.ink }]}>All done for tonight</Text>
@@ -63,7 +74,7 @@ export default function Quests() {
   );
 }
 
-function Featured({ q, reason, onToggle }: { q: QuestView; reason?: string; onToggle: (stepId: string) => void }) {
+function Featured({ q, reason, onToggle, onRemove }: { q: QuestView; reason?: string; onToggle: (stepId: string) => void; onRemove: () => void }) {
   return (
     <View style={styles.featured}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
@@ -116,12 +127,16 @@ function Featured({ q, reason, onToggle }: { q: QuestView; reason?: string; onTo
           </Text>
         </Pressable>
       )}
+      <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${q.title}`} onPress={onRemove} style={{ alignSelf: 'flex-end', minHeight: 36, justifyContent: 'center' }}>
+        <Text style={[body(700), { fontSize: 13, color: C.muted }]}>Remove quest</Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   featured: { backgroundColor: C.card, borderWidth: 2, borderColor: C.fox, borderRadius: 22, padding: 18, gap: 12 },
+  add: { backgroundColor: C.fox, borderRadius: 999, paddingVertical: 9, paddingHorizontal: 14, minHeight: 40, justifyContent: 'center' },
   reward: { fontSize: 13, color: C.rust, backgroundColor: C.foxSoft, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, overflow: 'hidden' },
   pipNote: { fontSize: 14, color: C.muted, backgroundColor: C.paper, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, overflow: 'hidden' },
   step: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, paddingHorizontal: 2, minHeight: 44 },

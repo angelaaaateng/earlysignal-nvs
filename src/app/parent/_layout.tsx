@@ -6,7 +6,6 @@ export default function ParentLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="help" />
       <Stack.Screen name="account" />
-      <Stack.Screen name="add-child" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
 }

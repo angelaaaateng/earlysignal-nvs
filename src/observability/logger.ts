@@ -34,7 +34,7 @@ const LEVELS: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40
  * Keys whose values are never logged. Matching is case-insensitive and on
  * substrings, so `noteText`, `privateNote` and `draftMessage` are all caught.
  */
-const REDACT_KEYS = ['note', 'text', 'draft', 'name', 'birth', 'email', 'phone', 'password', 'token', 'secret', 'message'];
+const REDACT_KEYS = ['note', 'text', 'draft', 'name', 'birth', 'email', 'phone', 'password', 'token', 'secret', 'message', 'username', 'code'];
 /** Keys that look sensitive but are safe identifiers or enums. */
 const ALLOW_KEYS = new Set(['event', 'screen', 'route', 'pathname', 'errorName', 'errorMessage', 'role', 'method', 'key', 'action', 'level']);
 

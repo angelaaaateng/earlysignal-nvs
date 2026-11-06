@@ -18,6 +18,10 @@ export interface User {
   birthDate?: DateKey;
   /** Students only. School grade, shown to partner admins. */
   grade?: number;
+  /** Students only: the name they sign in with. */
+  username?: string;
+  /** Students only: when they confirmed they are 13 or older. */
+  ageAttestedAt?: string;
   /** Admins only. The school or clinic they work for. */
   orgId?: string;
   createdAt: string;

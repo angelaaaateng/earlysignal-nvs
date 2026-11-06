@@ -3,10 +3,12 @@ import { CONSENT_NOTICE_VERSION } from '@/domain/coppa';
 import { addDays, daysBetween, dueLabel, monthDay, partOfDay, rangeLabel, toDateKey, weekdayLong, weekStart } from '@/domain/dates';
 import type { ParentWeeklySummary } from '@/domain/parent';
 import { burrowLevel } from '@/domain/rewards';
+import type { QuestPlan } from '@/domain/questTemplates';
 import type { QuestView, StudentHome } from '@/domain/student';
 import type { CheckInScore, HelpContact, ParentalConsent, SharingKey, SharingSettings, User } from '@/domain/types';
 import { supabase } from '@/lib/supabase';
 import { log } from '@/observability/logger';
+import { normalizeUsername, studentEmail, USERNAME_RE } from './auth';
 import type { Backend, ChildSummary, Session, SignInResult } from './backend';
 import { BackendError, toBackendError } from './backend';
 
@@ -84,6 +86,58 @@ export class SupabaseBackend implements Backend {
     }
   }
 
+  async signUpStudent(input: { username: string; password: string; displayName: string; grade?: number; ageAttested: boolean }): Promise<SignInResult> {
+    const username = normalizeUsername(input.username);
+    if (!input.ageAttested) return { ok: false, message: 'EarlySignal is for ages 13 and up.' };
+    if (!USERNAME_RE.test(username)) return { ok: false, message: 'Usernames are 3–20 letters, numbers or underscores.' };
+    const r = await this.sb.rpc('sign_up_student', { p_username: username, p_password: input.password, p_display_name: input.displayName.trim(), p_grade: input.grade ?? null, p_age_attested: true });
+    if (r.error) return { ok: false, message: toBackendError(r.error).message };
+    return this.signInStudent(username, input.password);
+  }
+
+  async signInStudent(username: string, password: string): Promise<SignInResult> {
+    const { data, error } = await this.sb.auth.signInWithPassword({ email: studentEmail(username), password });
+    if (error || !data.user) return { ok: false, message: /invalid login/i.test(error?.message ?? '') ? 'Wrong username or password.' : friendlyAuth(error?.message ?? 'Sign-in failed') };
+    try {
+      return { ok: true, session: await this.sessionFor(data.user.id) };
+    } catch (e) {
+      return { ok: false, message: toBackendError(e).message };
+    }
+  }
+
+  async deleteMyAccount() {
+    unwrap(await this.sb.rpc('delete_my_account'));
+    await this.sb.auth.signOut();
+  }
+
+  async createQuest(_s: Session, plan: QuestPlan) {
+    return unwrap(
+      await this.sb.rpc('create_quest', {
+        p_title: plan.title, p_kind: plan.kind, p_due_date: plan.dueDate, p_acorns: plan.acorns,
+        p_teacher: plan.teacher ?? null, p_when: plan.when ?? null, p_reward: plan.reward ?? null,
+        p_steps: plan.steps.map((st) => ({ label: st.label, minutes: st.minutes, hint: st.hint ?? null })),
+      }),
+    ) as string;
+  }
+  async deleteQuest(_s: Session, questId: string) {
+    unwrap(await this.sb.rpc('delete_quest', { p_quest_id: questId }));
+  }
+  async createParentLinkCode() {
+    return unwrap(await this.sb.rpc('create_parent_link_code')) as { code: string; expiresAt: string };
+  }
+  async myParents() {
+    return (unwrap(await this.sb.rpc('my_parents')) as { id: string; name: string }[]) ?? [];
+  }
+  async redeemLinkCode(_s: Session, code: string) {
+    return unwrap(await this.sb.rpc('redeem_parent_link_code', { p_code: code })) as string;
+  }
+  async unlinkStudent(_s: Session, studentId: string) {
+    unwrap(await this.sb.rpc('unlink_student', { p_student_id: studentId }));
+  }
+  async resetChildPassword(_s: Session, studentId: string, newPassword: string) {
+    unwrap(await this.sb.rpc('reset_child_password', { p_student_id: studentId, p_new_password: newPassword }));
+  }
+
   async issueChildSignIn(_s: Session, studentId: string) {
     return unwrap(await this.sb.rpc('issue_child_sign_in', { p_student_id: studentId })) as string;
   }
@@ -141,14 +195,16 @@ export class SupabaseBackend implements Backend {
   async studentHome(s: Session, now: Date): Promise<StudentHome> {
     const me = s.user.id;
     const today = toDateKey(now);
-    const [quests, acornRows, todays, streak, sharingRow, parentRow] = await Promise.all([
+    const [quests, acornRows, todays, streak, sharingRow, parentRow, parents] = await Promise.all([
       this.questViews(me, today),
       this.sb.from('acorns').select('amount').eq('student_id', me).then(unwrap) as Promise<Row[]>,
       this.sb.from('check_ins').select('score').eq('student_id', me).eq('date', today).maybeSingle<Row>().then(unwrap),
       this.sb.rpc('current_streak', { p_student_id: me, p_today: today }).then(unwrap) as Promise<number>,
       this.sb.from('sharing_settings').select('*').eq('student_id', me).maybeSingle<Row>().then(unwrap),
       this.sb.from('family_parents').select('relationship, family_id').limit(1).maybeSingle<Row>().then(unwrap),
+      this.sb.rpc('my_parents').then(unwrap) as Promise<{ id: string; name: string }[]>,
     ]);
+    const parentName = parents?.[0]?.name?.split(' ')[0];
     const acorns = acornRows.reduce((n, a) => n + a.amount, 0);
     const tonight = (quests as (QuestView & { completedAt?: string })[])
       .filter((q) => q.kind === 'quest')
@@ -178,7 +234,7 @@ export class SupabaseBackend implements Backend {
       open: active ? [active, ...open.filter((q) => q.id !== active.id)] : open,
       boss,
       tonightMinutes: open.reduce((n, q) => n + q.totalMinutes, 0),
-      parentLabel: parentRow?.relationship ?? 'Your parent',
+      parentLabel: parentRow?.relationship ?? parentName ?? 'your parent',
       sharing,
     };
   }
@@ -241,20 +297,18 @@ export class SupabaseBackend implements Backend {
     return out;
   }
 
-  async parentChildren(s: Session): Promise<ChildSummary[]> {
-    if (!s.familyId) return [];
-    const rows = unwrap(await this.sb.from('family_students').select('user_id, users(display_name)').eq('family_id', s.familyId)) as Row[];
-    const consents = unwrap(await this.sb.from('parental_consents').select('student_id, method, granted_at').eq('family_id', s.familyId).is('revoked_at', null)) as Row[];
-    return rows.map((r) => {
-      const c = consents.find((x) => x.student_id === r.user_id);
-      return { id: r.user_id, name: String(r.users?.display_name ?? '').split(' ')[0], consent: c ? { method: c.method, grantedAt: c.granted_at } : undefined };
-    });
+  async parentChildren(_s: Session): Promise<ChildSummary[]> {
+    // RLS limits this to the families this parent belongs to.
+    const rows = unwrap(await this.sb.from('family_students').select('user_id, users(display_name, username, role)')) as Row[];
+    return rows
+      .filter((r) => r.users?.role === 'student')
+      .map((r) => ({ id: r.user_id, name: String(r.users?.display_name ?? '').split(' ')[0], username: r.users?.username ?? undefined }));
   }
   async parentWeeklySummary(_s: Session, studentId: string, now: Date) {
     return this.summary(studentId, now);
   }
-  async helpContacts(s: Session): Promise<HelpContact[]> {
-    const rows = unwrap(await this.sb.from('help_contacts').select('*').eq('family_id', s.familyId!)) as Row[];
+  async helpContacts(): Promise<HelpContact[]> {
+    const rows = unwrap(await this.sb.from('help_contacts').select('*')) as Row[];
     return rows.map((r) => ({ id: r.id, familyId: r.family_id, name: r.name, sub: r.sub, tag: r.tag, draft: r.draft }));
   }
   async sendCheer(_s: Session, studentId: string) {

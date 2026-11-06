@@ -1,7 +1,9 @@
 import { familiesOfParent } from '@/domain/access';
 import { adminDashboard } from '@/domain/admin';
-import { createStudentAccount, recordParentalConsent } from '@/domain/coppa';
-import { adminSuggestCoach, sendCheer, setSharing, submitCheckIn, toggleQuestStep } from '@/domain/mutations';
+import { createStudentAccount, defaultSharing, recordParentalConsent } from '@/domain/coppa';
+import { adminSuggestCoach, createQuest, deleteQuest, sendCheer, setSharing, submitCheckIn, toggleQuestStep } from '@/domain/mutations';
+import type { QuestPlan } from '@/domain/questTemplates';
+import { normalizeUsername, USERNAME_RE } from './auth';
 import { helpContactsFor, parentStudents, parentWeeklySummary, previewOwnParentSummary } from '@/domain/parent';
 import { ownNoteForToday, studentHome } from '@/domain/student';
 import type { Db, Role } from '@/domain/types';
@@ -52,6 +54,94 @@ export class MockBackend implements Backend {
       }
     }
     return null;
+  }
+
+  /** Demo students: username only. Passwords aren't checked on example data. */
+  async signUpStudent(input: { username: string; password: string; displayName: string; grade?: number; ageAttested: boolean }): Promise<SignInResult> {
+    const username = normalizeUsername(input.username);
+    if (!input.ageAttested) return { ok: false, message: 'EarlySignal is for ages 13 and up.' };
+    if (!USERNAME_RE.test(username)) return { ok: false, message: 'Usernames are 3–20 letters, numbers or underscores.' };
+    if (input.password.length < 8) return { ok: false, message: 'Your password needs at least 8 characters.' };
+    if (!input.displayName.trim()) return { ok: false, message: 'Tell Pip what to call you.' };
+    if (this.db.users.some((u) => u.username === username)) return { ok: false, message: 'That username is taken. Try another.' };
+    const now = new Date().toISOString();
+    const id = `stu_${username}`;
+    this.commit({
+      ...this.db,
+      users: [...this.db.users, { id, role: 'student', displayName: input.displayName.trim(), grade: input.grade, username, ageAttestedAt: now, createdAt: now }],
+      sharing: [...this.db.sharing, defaultSharing(id, now)],
+    });
+    this.userId = id;
+    void saveState(this.db, this.userId);
+    return { ok: true, session: this.session(id) };
+  }
+  async signInStudent(username: string): Promise<SignInResult> {
+    const u = this.db.users.find((x) => x.role === 'student' && x.username === normalizeUsername(username));
+    if (!u) return { ok: false, message: 'Wrong username or password.' };
+    this.userId = u.id;
+    void saveState(this.db, this.userId);
+    return { ok: true, session: this.session(u.id) };
+  }
+  async deleteMyAccount(s: Session) {
+    const id = s.user.id;
+    this.userId = null;
+    this.commit({
+      ...this.db,
+      users: this.db.users.filter((u) => u.id !== id),
+      families: this.db.families.map((f) => ({ ...f, studentIds: f.studentIds.filter((x) => x !== id), parents: f.parents.filter((p) => p.userId !== id) })),
+    });
+  }
+  async createQuest(s: Session, plan: QuestPlan) {
+    let id = '';
+    this.run((db, now) => {
+      const r = createQuest(db, s.user.id, plan, now);
+      id = r.questId;
+      return r.db;
+    });
+    return id;
+  }
+  async deleteQuest(s: Session, questId: string) {
+    this.run((db) => deleteQuest(db, s.user.id, questId));
+  }
+  private linkCodes = new Map<string, { studentId: string; expires: number }>();
+  async createParentLinkCode(s: Session) {
+    for (const [k, v] of this.linkCodes) if (v.studentId === s.user.id) this.linkCodes.delete(k);
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+    const expires = Date.now() + 7 * 24 * 60 * 60_000;
+    this.linkCodes.set(code, { studentId: s.user.id, expires });
+    return { code, expiresAt: new Date(expires).toISOString() };
+  }
+  async myParents(s: Session) {
+    const fam = this.db.families.find((f) => f.studentIds.includes(s.user.id));
+    return (fam?.parents ?? []).map((p) => ({ id: p.userId, name: this.db.users.find((u) => u.id === p.userId)?.displayName ?? 'Parent' }));
+  }
+  async redeemLinkCode(s: Session, code: string) {
+    const key = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const t = this.linkCodes.get(key);
+    this.linkCodes.delete(key);
+    if (!t || t.expires < Date.now()) throw toBackendError(new Error('INVALID: That code isn’t valid any more. Ask your kid to show you a fresh one.'));
+    this.run((db) => {
+      const existing = db.families.find((f) => f.studentIds.includes(t.studentId));
+      if (existing) {
+        return { ...db, families: db.families.map((f) => (f.id === existing.id && !f.parents.some((p) => p.userId === s.user.id) ? { ...f, parents: [...f.parents, { userId: s.user.id }] } : f)) };
+      }
+      const mine = familiesOfParent(db, s.user.id)[0];
+      if (mine) return { ...db, families: db.families.map((f) => (f.id === mine.id ? { ...f, studentIds: [...f.studentIds, t.studentId] } : f)) };
+      return { ...db, families: [...db.families, { id: `fam_${s.user.id}`, parents: [{ userId: s.user.id }], studentIds: [t.studentId], adminOptIn: false, enrolledAt: new Date().toISOString() }] };
+    });
+    return t.studentId;
+  }
+  async unlinkStudent(s: Session, studentId: string) {
+    this.run((db) => {
+      if (!familiesOfParent(db, s.user.id).some((f) => f.studentIds.includes(studentId))) throw new Error('ACCESS_DENIED: not this student’s parent');
+      return { ...db, families: db.families.map((f) => ({ ...f, studentIds: f.studentIds.filter((x) => x !== studentId) })) };
+    });
+  }
+  async resetChildPassword(s: Session, studentId: string, newPassword: string) {
+    if (!familiesOfParent(this.db, s.user.id).some((f) => f.studentIds.includes(studentId))) throw toBackendError(new Error('ACCESS_DENIED: not this student’s parent'));
+    if (newPassword.length < 8) throw toBackendError(new Error('INVALID: The new password needs at least 8 characters.'));
   }
 
   async signUp(): Promise<SignInResult> {
@@ -119,7 +209,7 @@ export class MockBackend implements Backend {
   async parentChildren(s: Session): Promise<ChildSummary[]> {
     return parentStudents(this.db, s.user.id).map((k) => {
       const c = this.db.consents.find((x) => x.studentId === k.id && !x.revokedAt);
-      return { id: k.id, name: k.name, consent: c ? { method: c.method, grantedAt: c.grantedAt } : undefined };
+      return { id: k.id, name: k.name, username: this.db.users.find((u) => u.id === k.id)?.username, consent: c ? { method: c.method, grantedAt: c.grantedAt } : undefined };
     });
   }
   async parentWeeklySummary(s: Session, studentId: string, now: Date) {

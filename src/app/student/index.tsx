@@ -75,14 +75,23 @@ export default function Burrow() {
         <Text accessibilityRole="header" style={[display(700), { fontSize: 20, color: C.ink }]}>
           Tonight’s quests
         </Text>
-        <Pressable accessibilityRole="link" onPress={() => router.replace('/student/quests')} hitSlop={12}>
-          <Text style={[body(800), { fontSize: 14, color: C.rust }]}>See plan</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <Pressable accessibilityRole="link" onPress={() => router.replace('/student/quests')} hitSlop={12}>
+            <Text style={[body(800), { fontSize: 14, color: C.rust }]}>See plan</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add a quest" onPress={() => router.push('/student/add-quest')} hitSlop={12}>
+            <Text style={[body(800), { fontSize: 14, color: C.rust }]}>+ Add</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={{ gap: 10 }}>
         {h.tonight.length === 0 && (
-          <Text style={[body(400), { fontSize: 14, color: C.muted }]}>No quests tonight. Enjoy the Burrow.</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/student/add-quest')} style={styles.empty}>
+            <Text style={[body(800), { fontSize: 15, color: C.ink }]}>Nothing on the plan yet</Text>
+            <Text style={[body(400), { fontSize: 13, color: C.muted }]}>Add tonight’s homework and Pip will split it into small steps. Or pick a study habit.</Text>
+            <Text style={[body(800), { fontSize: 14, color: C.rust }]}>Add your first quest →</Text>
+          </Pressable>
         )}
         {h.tonight.map((q) => (
           <QuestRow
@@ -117,4 +126,5 @@ const styles = StyleSheet.create({
   checkIn: { backgroundColor: C.foxSoft, borderRadius: 22, paddingVertical: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 14 },
   checkInIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.fox, alignItems: 'center', justifyContent: 'center' },
   sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  empty: { backgroundColor: C.card, borderWidth: 1.5, borderColor: C.line, borderStyle: 'dashed', borderRadius: 20, padding: 18, gap: 6 },
 });

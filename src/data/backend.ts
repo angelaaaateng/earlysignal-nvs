@@ -9,6 +9,7 @@
 import type { AdminDashboard } from '@/domain/admin';
 import type { ParentWeeklySummary } from '@/domain/parent';
 import type { StudentHome } from '@/domain/student';
+import type { QuestPlan } from '@/domain/questTemplates';
 import type { CheckInScore, HelpContact, ParentalConsent, Role, SharingKey, User } from '@/domain/types';
 
 export interface Session {
@@ -22,6 +23,7 @@ export type SignInResult = { ok: true; session: Session } | { ok: false; message
 export interface ChildSummary {
   id: string;
   name: string;
+  username?: string;
   consent?: { method: ParentalConsent['method']; grantedAt: string };
 }
 
@@ -41,9 +43,13 @@ export interface Backend {
    */
   issueChildSignIn(session: Session, studentId: string): Promise<string>;
   redeemChildSignIn(token: string): Promise<SignInResult>;
+  /** Student (13+): create an account with a username and password. No email. */
+  signUpStudent(input: { username: string; password: string; displayName: string; grade?: number; ageAttested: boolean }): Promise<SignInResult>;
+  signInStudent(username: string, password: string): Promise<SignInResult>;
   /** Mock only: the demo role cards. */
   signInDemo?(role: Role): Promise<SignInResult>;
   signOut(): Promise<void>;
+  deleteMyAccount(session: Session): Promise<void>;
 
   // ---- student
   studentHome(session: Session, now: Date): Promise<StudentHome>;
@@ -52,6 +58,11 @@ export interface Backend {
   toggleQuestStep(session: Session, stepId: string): Promise<void>;
   setSharing(session: Session, key: SharingKey, value: boolean): Promise<void>;
   previewParentSummary(session: Session, now: Date): Promise<ParentWeeklySummary>;
+  createQuest(session: Session, plan: QuestPlan): Promise<string>;
+  deleteQuest(session: Session, questId: string): Promise<void>;
+  /** A code the student shows a parent. Replaces any earlier code. */
+  createParentLinkCode(session: Session): Promise<{ code: string; expiresAt: string }>;
+  myParents(session: Session): Promise<{ id: string; name: string }[]>;
 
   // ---- parent
   parentChildren(session: Session): Promise<ChildSummary[]>;
@@ -63,6 +74,10 @@ export interface Backend {
   setAdminOptIn(session: Session, optIn: boolean): Promise<void>;
   familyOptIn(session: Session): Promise<boolean>;
   deleteStudent(session: Session, studentId: string): Promise<void>;
+  /** Parent types the code from the student's screen. Returns the student id. */
+  redeemLinkCode(session: Session, code: string): Promise<string>;
+  unlinkStudent(session: Session, studentId: string): Promise<void>;
+  resetChildPassword(session: Session, studentId: string, newPassword: string): Promise<void>;
 
   // ---- admin
   adminDashboard(session: Session, now: Date): Promise<AdminDashboard>;

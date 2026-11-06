@@ -1,42 +1,33 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
 import type { Role } from '@/domain/types';
 import { InstallBanner } from '@/pwa/InstallBanner';
+import { Button, Check, ErrorText, Field } from '@/ui/Form';
 import { Icon, type IconName } from '@/ui/Icon';
 import { Pip } from '@/ui/Pip';
 import { Screen } from '@/ui/Screen';
 import { body, C, display, eyebrow } from '@/ui/theme';
 
-type Mode = 'pick' | 'student' | 'signin' | 'signup';
+type Mode = 'pick' | 'student-new' | 'student-in' | 'parent-in' | 'parent-new';
 
 /**
- * Canvas 0 · Sign in (pick a role).
- * Parents and admins: email + password, created here. Nothing is emailed.
- * Students: signed in by their parent's tap (never an email or password: COPPA).
- * With the demo backend the cards sign straight in, as on the canvas.
+ * Sign in. Students (13+) make their own account: username + password, no
+ * email. Parents are optional: email + password, then a code from their kid.
+ * With the demo backend the cards open example accounts.
  */
 export default function SignIn() {
   const { signIn, backend } = useApp();
   const demo = backend.kind === 'mock';
   const [mode, setMode] = useState<Mode>('pick');
-  const [role, setRole] = useState<Role>('parent');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  const pick = (r: Role) => {
-    setError('');
-    setRole(r);
-    if (demo) {
-      setBusy(true);
-      void signIn((b) => b.signInDemo!(r)).finally(() => setBusy(false));
-      return;
-    }
-    setMode(r === 'student' ? 'student' : 'signin');
-  };
+  const [grade, setGrade] = useState('');
+  const [is13, setIs13] = useState(false);
 
   const go = async (fn: () => Promise<{ ok: boolean; message?: string }>) => {
     setBusy(true);
@@ -44,35 +35,34 @@ export default function SignIn() {
     try {
       const r = await fn();
       if (!r.ok) setError(r.message ?? 'Something went wrong.');
-      return r.ok;
     } catch (e) {
       setError((e as Error).message);
-      return false;
     } finally {
       setBusy(false);
     }
   };
-
-  const validEmail = /^\S+@\S+\.\S+$/.test(email);
-  const validPassword = password.length >= 8;
-  const signInGo = () => void go(() => signIn((b) => b.signInWithPassword(email, password)));
-  const signUpGo = () => void go(() => signIn((b) => b.signUp({ email, password, displayName: name })));
+  const demoCard = (r: Role) => void go(() => signIn((b) => b.signInDemo!(r)));
   const switchTo = (m: Mode) => {
     setMode(m);
     setError('');
   };
 
+  const validEmail = /^\S+@\S+\.\S+$/.test(email);
+  const validUser = /^[a-z0-9_]{3,20}$/.test(username.trim().toLowerCase());
+  const validPassword = password.length >= 8;
+  const gradeNum = grade ? Number(grade) : undefined;
+
   return (
-    <Screen bg={C.burrow} contentStyle={{ paddingTop: 56, paddingHorizontal: 24, gap: 20 }}>
+    <Screen bg={C.burrow} contentStyle={{ paddingTop: 48, paddingHorizontal: 24, gap: 18 }}>
       <InstallBanner />
-      <View style={{ alignItems: 'center', gap: 10 }}>
-        <Pip size={mode === 'pick' ? 150 : 96} variant="peek" label="Pip the fox peeking out of a burrow" />
-        <Text accessibilityRole="header" style={[display(800), { fontSize: 40, color: C.cream, letterSpacing: -0.4 }]}>
+      <View style={{ alignItems: 'center', gap: 8 }}>
+        <Pip size={mode === 'pick' ? 140 : 84} variant="peek" label="Pip the fox peeking out of a burrow" />
+        <Text accessibilityRole="header" style={[display(800), { fontSize: 38, color: C.cream, letterSpacing: -0.4 }]}>
           EarlySignal<Text style={{ color: C.gold }}>.</Text>
         </Text>
         {mode === 'pick' && (
-          <Text style={[body(400), { fontSize: 16, color: C.creamMuted, maxWidth: 290, textAlign: 'center' }]}>
-            Better study habits for kids. Calm, early signals for families.
+          <Text style={[body(400), { fontSize: 16, color: C.creamMuted, maxWidth: 300, textAlign: 'center' }]}>
+            Small study quests, a 10-second daily check-in, and a fox who’s on your side.
           </Text>
         )}
       </View>
@@ -80,64 +70,102 @@ export default function SignIn() {
       <View style={{ flexGrow: 1 }} />
 
       {mode === 'pick' && (
-        <>
-          <Text accessibilityRole="header" style={[display(700), { fontSize: 20, color: C.cream }]}>
-            Who’s signing in?
-          </Text>
-          <View style={{ gap: 12 }}>
-            <RoleCard onPress={() => pick('student')} title="I’m a student" sub="Go to your Burrow" icon="student" variant="gold" disabled={busy} />
-            <RoleCard onPress={() => pick('parent')} title="I’m a parent" sub="Your weekly summary" icon="family" variant="paper" disabled={busy} />
-            <RoleCard onPress={() => pick('admin')} title="School or clinic admin" sub="Partner dashboard" icon="monitor" variant="outline" disabled={busy} />
-          </View>
-          <Text style={[body(400), { fontSize: 13, color: C.creamMuted, textAlign: 'center' }]}>
-            {demo ? 'Demo: each card opens an example account.' : 'Students are signed in by a parent. No password to remember.'}
-          </Text>
-        </>
-      )}
-
-      {mode === 'student' && (
         <View style={{ gap: 12 }}>
-          <Text style={eyebrow(C.gold)}>Student sign-in</Text>
-          <Text accessibilityRole="header" style={[display(700), { fontSize: 22, color: C.cream }]}>
-            Your parent opens your Burrow
-          </Text>
-          <Text style={[body(400), { fontSize: 15, color: C.creamMuted }]}>
-            Nothing to type. Ask your parent to sign in, go to <Text style={body(800)}>Account</Text>, and tap <Text style={body(800)}>Open Burrow</Text> next to your name. Your Burrow opens right here.
-          </Text>
+          {demo ? (
+            <>
+              <Text accessibilityRole="header" style={[display(700), { fontSize: 20, color: C.cream }]}>
+                Who’s signing in?
+              </Text>
+              <RoleCard onPress={() => demoCard('student')} title="I’m a student" sub="Open Maya’s Burrow" icon="student" variant="gold" disabled={busy} />
+              <RoleCard onPress={() => demoCard('parent')} title="I’m a parent" sub="Maya’s weekly summary" icon="family" variant="paper" disabled={busy} />
+              <Pressable accessibilityRole="button" onPress={() => switchTo('student-new')} style={styles.textBtn}>
+                <Text style={[body(700), { fontSize: 14, color: C.gold }]}>Try a brand-new student account</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={() => demoCard('admin')} style={styles.textBtn}>
+                <Text style={[body(400), { fontSize: 13, color: C.creamMuted }]}>School or clinic admin (demo)</Text>
+              </Pressable>
+              <Text style={[body(400), { fontSize: 13, color: C.creamMuted, textAlign: 'center' }]}>Demo: example data, stays on this device.</Text>
+            </>
+          ) : (
+            <>
+              <Button label="Get started" tone="gold" onPress={() => switchTo('student-new')} />
+              <Button label="I already have an account" tone="gold" variant="secondary" onPress={() => switchTo('student-in')} />
+              <Pressable accessibilityRole="button" onPress={() => switchTo('parent-in')} style={styles.textBtn}>
+                <Text style={[body(700), { fontSize: 14, color: C.creamMuted }]}>
+                  I’m a parent <Text style={{ color: C.gold }}>→</Text>
+                </Text>
+              </Pressable>
+              <Text style={[body(400), { fontSize: 13, color: C.creamMuted, textAlign: 'center' }]}>For students 13 and up. No email needed.</Text>
+            </>
+          )}
         </View>
       )}
 
-      {(mode === 'signin' || mode === 'signup') && (
+      {mode === 'student-new' && (
         <View style={{ gap: 12 }}>
-          <Text style={eyebrow(C.gold)}>{role === 'admin' ? 'Partner admin' : 'Parent'}</Text>
-          <Text accessibilityRole="header" style={[display(700), { fontSize: 22, color: C.cream }]}>
-            {mode === 'signup' ? 'Create your account' : 'Sign in'}
+          <Text style={eyebrow(C.gold)}>New account</Text>
+          <Text accessibilityRole="header" style={[display(700), { fontSize: 24, color: C.cream }]}>
+            Pick a username
           </Text>
-          {mode === 'signup' && <Field label="Your name" value={name} onChange={setName} placeholder="Ana Santos" autoCapitalize="words" />}
-          <Field label="Email" value={email} onChange={setEmail} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" />
-          <Field label="Password" value={password} onChange={setPassword} placeholder={mode === 'signup' ? 'At least 8 characters' : '••••••••'} secure />
-          {mode === 'signup' && role === 'admin' && (
-            <Text style={[body(400), { fontSize: 13, color: C.creamMuted }]}>Admin accounts are invite-only. Use the email your school or clinic was invited with.</Text>
-          )}
-          <Primary
-            label={busy ? (mode === 'signup' ? 'Creating…' : 'Signing in…') : mode === 'signup' ? 'Create account' : 'Sign in'}
-            disabled={busy || !validEmail || !validPassword || (mode === 'signup' && !name.trim())}
-            onPress={mode === 'signup' ? signUpGo : signInGo}
+          <Field label="Username" value={username} onChange={(v) => setUsername(v.replace(/\s/g, ''))} placeholder="e.g. fox_maya" autoCapitalize="none" textContentType="username" hint="3–20 letters, numbers or underscores. This is how you sign in." autoFocus />
+          <Field label="Password" value={password} onChange={setPassword} placeholder="At least 8 characters" secure textContentType="newPassword" />
+          <Field label="What should Pip call you?" value={name} onChange={setName} placeholder="Maya" autoCapitalize="words" textContentType="name" />
+          <Field label="Grade (optional)" value={grade} onChange={(v) => setGrade(v.replace(/[^0-9]/g, '').slice(0, 2))} placeholder="7" keyboardType="number-pad" />
+          <Check checked={is13} onToggle={() => setIs13(!is13)} label="I’m 13 or older" dark />
+          <Button
+            label={busy ? 'Making your Burrow…' : 'Create my account'}
+            tone="gold"
+            disabled={busy || !validUser || !validPassword || !name.trim() || !is13 || (gradeNum !== undefined && (gradeNum < 1 || gradeNum > 12))}
+            onPress={() => void go(() => signIn((b) => b.signUpStudent({ username, password, displayName: name, grade: gradeNum, ageAttested: is13 })))}
           />
-          <Pressable accessibilityRole="button" onPress={() => switchTo(mode === 'signup' ? 'signin' : 'signup')} disabled={busy} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={[body(700), { fontSize: 14, color: C.gold }]}>{mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account'}</Text>
+          <Pressable accessibilityRole="button" onPress={() => switchTo('student-in')} style={styles.textBtn} disabled={busy}>
+            <Text style={[body(700), { fontSize: 14, color: C.gold }]}>Already have an account? Sign in</Text>
           </Pressable>
         </View>
       )}
 
-      {!!error && (
-        <Text accessibilityRole="alert" style={[body(700), { fontSize: 14, color: C.gold, textAlign: 'center' }]}>
-          {error}
-        </Text>
+      {mode === 'student-in' && (
+        <View style={{ gap: 12 }}>
+          <Text style={eyebrow(C.gold)}>Welcome back</Text>
+          <Text accessibilityRole="header" style={[display(700), { fontSize: 24, color: C.cream }]}>
+            Sign in
+          </Text>
+          <Field label="Username" value={username} onChange={(v) => setUsername(v.replace(/\s/g, ''))} placeholder="fox_maya" autoCapitalize="none" textContentType="username" autoFocus />
+          <Field label="Password" value={password} onChange={setPassword} placeholder="••••••••" secure />
+          <Button label={busy ? 'Signing in…' : 'Sign in'} tone="gold" disabled={busy || !username.trim() || !password} onPress={() => void go(() => signIn((b) => b.signInStudent(username, password)))} />
+          <Text style={[body(400), { fontSize: 13, color: C.creamMuted, textAlign: 'center' }]}>Forgot your password? A linked parent can reset it from their Account tab.</Text>
+          <Pressable accessibilityRole="button" onPress={() => switchTo('student-new')} style={styles.textBtn} disabled={busy}>
+            <Text style={[body(700), { fontSize: 14, color: C.gold }]}>New here? Create an account</Text>
+          </Pressable>
+        </View>
       )}
 
+      {(mode === 'parent-in' || mode === 'parent-new') && (
+        <View style={{ gap: 12 }}>
+          <Text style={eyebrow(C.gold)}>Parent</Text>
+          <Text accessibilityRole="header" style={[display(700), { fontSize: 24, color: C.cream }]}>
+            {mode === 'parent-new' ? 'Create your account' : 'Sign in'}
+          </Text>
+          {mode === 'parent-new' && <Field label="Your name" value={name} onChange={setName} placeholder="Ana Santos" autoCapitalize="words" textContentType="name" />}
+          <Field label="Email" value={email} onChange={setEmail} placeholder="you@example.com" keyboardType="email-address" textContentType="emailAddress" autoFocus />
+          <Field label="Password" value={password} onChange={setPassword} placeholder={mode === 'parent-new' ? 'At least 8 characters' : '••••••••'} secure textContentType={mode === 'parent-new' ? 'newPassword' : 'password'} />
+          <Button
+            label={busy ? (mode === 'parent-new' ? 'Creating…' : 'Signing in…') : mode === 'parent-new' ? 'Create account' : 'Sign in'}
+            tone="gold"
+            disabled={busy || !validEmail || !validPassword || (mode === 'parent-new' && !name.trim())}
+            onPress={() => void go(() => signIn((b) => (mode === 'parent-new' ? b.signUp({ email, password, displayName: name }) : b.signInWithPassword(email, password))))}
+          />
+          {mode === 'parent-new' && <Text style={[body(400), { fontSize: 13, color: C.creamMuted, textAlign: 'center' }]}>Next, you’ll type the 6-letter code your kid shows you. You only ever see what they choose to share.</Text>}
+          <Pressable accessibilityRole="button" onPress={() => switchTo(mode === 'parent-new' ? 'parent-in' : 'parent-new')} disabled={busy} style={styles.textBtn}>
+            <Text style={[body(700), { fontSize: 14, color: C.gold }]}>{mode === 'parent-new' ? 'Already have an account? Sign in' : 'New here? Create an account'}</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <ErrorText dark>{error}</ErrorText>
+
       {mode !== 'pick' && (
-        <Pressable accessibilityRole="button" onPress={() => switchTo('pick')} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
+        <Pressable accessibilityRole="button" onPress={() => switchTo('pick')} style={styles.textBtn}>
           <Text style={[body(700), { fontSize: 14, color: C.creamMuted }]}>← Back</Text>
         </Pressable>
       )}
@@ -145,19 +173,13 @@ export default function SignIn() {
   );
 }
 
-function RoleCard({ title, sub, icon, variant, onPress, disabled }: { title: string; sub: string; icon: IconName; variant: 'gold' | 'paper' | 'outline'; onPress: () => void; disabled?: boolean }) {
+function RoleCard({ title, sub, icon, variant, onPress, disabled }: { title: string; sub: string; icon: IconName; variant: 'gold' | 'paper'; onPress: () => void; disabled?: boolean }) {
   const v = {
     gold: { bg: C.gold, fg: C.ink, sub: C.ink, chip: C.ink, chipIcon: C.gold, chev: C.ink },
     paper: { bg: C.card, fg: C.ink, sub: C.muted, chip: C.greenSoft, chipIcon: C.greenParent, chev: C.muted },
-    outline: { bg: 'transparent', fg: C.cream, sub: C.creamMuted, chip: C.burrowEdge, chipIcon: C.cream, chev: C.creamMuted },
   }[variant];
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      disabled={disabled}
-      style={[styles.card, { backgroundColor: v.bg }, variant === 'outline' && { borderWidth: 1.5, borderColor: C.burrowLine, paddingVertical: 14 }, disabled && { opacity: 0.6 }]}
-    >
+    <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={[styles.card, { backgroundColor: v.bg }, disabled && { opacity: 0.6 }]}>
       <View style={[styles.chip, { backgroundColor: v.chip }]}>
         <Icon name={icon} size={22} color={v.chipIcon} />
       </View>
@@ -170,38 +192,8 @@ function RoleCard({ title, sub, icon, variant, onPress, disabled }: { title: str
   );
 }
 
-function Field(props: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; secure?: boolean; keyboardType?: 'email-address'; autoCapitalize?: 'none' | 'words' }) {
-  return (
-    <View style={{ gap: 6 }}>
-      <Text style={[body(800), { fontSize: 14, color: C.cream }]}>{props.label}</Text>
-      <TextInput
-        accessibilityLabel={props.label}
-        value={props.value}
-        onChangeText={props.onChange}
-        placeholder={props.placeholder}
-        placeholderTextColor={C.faint}
-        secureTextEntry={props.secure}
-        keyboardType={props.keyboardType}
-        autoCapitalize={props.autoCapitalize ?? 'none'}
-        autoCorrect={false}
-        textContentType={props.secure ? 'password' : props.keyboardType ? 'emailAddress' : 'name'}
-        style={[body(400), styles.input]}
-      />
-    </View>
-  );
-}
-
-function Primary({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress} style={[styles.primary, disabled && { opacity: 0.5 }]}>
-      <Text style={[body(800), { fontSize: 16, color: C.ink }]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   card: { borderRadius: 20, paddingVertical: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 44 },
   chip: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  input: { fontSize: 16, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1.5, borderColor: C.burrowLine, backgroundColor: C.burrowDeep, color: C.cream, minHeight: 48 },
-  primary: { backgroundColor: C.gold, borderRadius: 18, padding: 16, alignItems: 'center', minHeight: 48, justifyContent: 'center' },
+  textBtn: { minHeight: 44, justifyContent: 'center', alignItems: 'center' },
 });
