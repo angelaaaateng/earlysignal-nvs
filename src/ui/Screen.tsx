@@ -24,8 +24,8 @@ export function Screen({ children, tabs, aside, contentStyle, scroll = true, bg 
       <View style={[styles.outer, { backgroundColor: bg, flexDirection: 'row', alignItems: 'stretch' }]}>
         {showSidebar && <Sidebar active={tabs} />}
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
-          <View style={[styles.wideBody, narrow && { maxWidth: 640 }, contentStyle && { gap: (contentStyle as { gap?: number }).gap }]}>
-            <View style={[styles.wideMain, { gap: (contentStyle as { gap?: number })?.gap ?? S[4] }]}>{children}</View>
+          <View style={[styles.wideBody, narrow && !aside && { maxWidth: 680 }]}>
+            <View style={[styles.wideMain, narrow && { maxWidth: 560 }, { gap: (contentStyle as { gap?: number })?.gap ?? S[4] }]}>{children}</View>
             {aside && <View style={[styles.wideAside, { gap: (contentStyle as { gap?: number })?.gap ?? S[4] }]}>{aside}</View>}
           </View>
         </ScrollView>
@@ -142,6 +142,6 @@ const styles = StyleSheet.create({
   sidebar: { width: 272, backgroundColor: C.bubble, margin: S[5], marginRight: 0, borderRadius: R.xl, padding: S[4], ...shadowSoft },
   sideItem: { flexDirection: 'row', alignItems: 'center', gap: S[3], paddingVertical: 10, paddingHorizontal: S[3], borderRadius: R.md, minHeight: 52 },
   wideBody: { width: '100%', maxWidth: 1160, flexDirection: 'row', alignItems: 'flex-start', gap: S[8], paddingVertical: S[12], paddingHorizontal: S[8] },
-  wideMain: { flex: 1, minWidth: 0, maxWidth: 680 },
-  wideAside: { width: 360 },
+  wideMain: { flex: 1, minWidth: 420, maxWidth: 680 },
+  wideAside: { width: 360, flexShrink: 0 },
 });
