@@ -1,4 +1,4 @@
-/* EarlySignal service worker.
+/* Rooted service worker.
  *
  * - Pages: network first, so a new deploy shows up on the next launch; falls
  *   back to the cached app shell when offline.

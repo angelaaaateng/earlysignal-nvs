@@ -24,10 +24,10 @@ export default defineConfig({
   },
   projects: [
     // Phones (Chromium engine with each device's viewport, touch and user agent).
-    { name: 'iphone', use: { ...devices['iPhone 14'], ...chromium }, testIgnore: /admin\.spec|pwa\.spec/ },
-    { name: 'android', use: { ...devices['Pixel 7'], ...chromium }, testIgnore: /admin\.spec|pwa\.spec/ },
-    // The admin dashboard is a desktop web app.
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } }, testMatch: /admin\.spec|pwa\.spec/ },
+    { name: 'iphone', use: { ...devices['iPhone 14'], ...chromium }, testIgnore: /pwa\.spec/ },
+    { name: 'android', use: { ...devices['Pixel 7'], ...chromium }, testIgnore: /pwa\.spec/ },
+    // Install metadata, offline and headers once, on desktop Chrome.
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } }, testMatch: /pwa\.spec|core-loop\.spec/ },
   ],
   webServer: {
     command: `node scripts/serve.mjs dist ${PORT}`,

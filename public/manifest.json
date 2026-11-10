@@ -1,21 +1,22 @@
 {
   "id": "/",
-  "name": "EarlySignal",
-  "short_name": "EarlySignal",
-  "description": "Better study habits for kids. Calm, early signals for families.",
+  "name": "Rooted",
+  "short_name": "Rooted",
+  "description": "Know what to ask your kid, and when. Small talks, deep roots.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#3A2416",
-  "theme_color": "#3A2416",
-  "categories": ["education", "productivity"],
+  "background_color": "#f6f4f0",
+  "theme_color": "#123a28",
+  "categories": ["lifestyle", "education"],
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Daily check-in", "url": "/student/check-in", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Tonight’s starter", "url": "/home", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Add to the week", "url": "/event", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

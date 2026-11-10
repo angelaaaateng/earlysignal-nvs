@@ -22,7 +22,7 @@ cpSync('dist', tmp, { recursive: true });
 const git = (c) => sh(`git ${c}`, { cwd: tmp });
 git('init -q -b gh-pages');
 git('add -A');
-git(`-c user.name="${out('git config user.name') || 'EarlySignal deploy'}" -c user.email="${out('git config user.email') || 'deploy@localhost'}" commit -q -m "Deploy ${sha}"`);
+git(`-c user.name="${out('git config user.name') || 'Rooted deploy'}" -c user.email="${out('git config user.email') || 'deploy@localhost'}" commit -q -m "Deploy ${sha}"`);
 // Force-push: gh-pages holds only the latest build output, never source.
 sh(`git push -f "${remote}" HEAD:gh-pages`, { cwd: tmp });
 rmSync(tmp, { recursive: true, force: true });

@@ -38,26 +38,26 @@ const fontFile = (needle) => {
   return hit ? `${BASE}/${hit.slice('dist/'.length)}` : '';
 };
 const FONTS = `
-@font-face{font-family:Bric;font-weight:800;src:url(${fontFile('BricolageGrotesque_800ExtraBold')})}
-@font-face{font-family:Nun;font-weight:400;src:url(${fontFile('NunitoSans_400Regular')})}
-@font-face{font-family:Nun;font-weight:800;src:url(${fontFile('NunitoSans_800ExtraBold')})}`;
+@font-face{font-family:Bric;font-weight:800;src:url(${fontFile('PlusJakartaSans_800ExtraBold')})}
+@font-face{font-family:Nun;font-weight:400;src:url(${fontFile('PlusJakartaSans_400Regular')})}
+@font-face{font-family:Nun;font-weight:800;src:url(${fontFile('PlusJakartaSans_700Bold')})}`;
 
 const stage = (layout, role, accent) => `<!doctype html><html><head><style>${FONTS}
-*{box-sizing:border-box} body{margin:0;width:1600px;height:900px;background:#2A1B12;overflow:hidden;font-family:Nun,sans-serif;color:#FBF1E4}
-#app{position:absolute;overflow:hidden;background:#3A2416}
+*{box-sizing:border-box} body{margin:0;width:1600px;height:900px;background:#123a28;overflow:hidden;font-family:Nun,sans-serif;color:#f6f4f0}
+#app{position:absolute;overflow:hidden;background:#f6f4f0}
 #app iframe{border:0;display:block}
-.phone #app{left:150px;top:28px;width:390px;height:844px;border-radius:44px;box-shadow:0 0 0 10px #140b06,0 0 0 11px #5A3A24,0 30px 90px rgba(0,0,0,.55)}
+.phone #app{left:150px;top:28px;width:390px;height:844px;border-radius:44px;box-shadow:0 0 0 10px #0b2419,0 0 0 11px #1d4d37,0 30px 90px rgba(0,0,0,.55)}
 .phone #cap{position:absolute;left:640px;top:0;width:860px;height:900px;display:flex;flex-direction:column;justify-content:center;gap:18px}
 .desk #app{left:160px;top:150px;width:1280px;height:730px;border-radius:14px;box-shadow:0 0 0 1px #5A3A24,0 24px 80px rgba(0,0,0,.5)}
 .desk #cap{position:absolute;left:160px;top:22px;width:1280px;height:120px;display:flex;flex-direction:column;justify-content:center;gap:6px}
 .desk #title{font-size:34px} .desk #text{font-size:19px;max-width:1280px}
-#chip{align-self:flex-start;font-weight:800;font-size:15px;letter-spacing:.12em;text-transform:uppercase;color:#2E1B10;background:${accent};padding:7px 14px;border-radius:999px}
+#chip{align-self:flex-start;font-weight:800;font-size:15px;letter-spacing:.12em;text-transform:uppercase;color:#1f1a16;background:${accent};padding:7px 14px;border-radius:999px}
 .desk #chip{display:none}
-#step{font-weight:800;font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:#E8B23A}
+#step{font-weight:800;font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:#c5ef6a}
 #title{font-family:Bric,sans-serif;font-weight:800;font-size:52px;line-height:1.05;margin:0}
-#text{font-size:24px;line-height:1.45;color:#E2CDB8;margin:0;max-width:820px}
+#text{font-size:24px;line-height:1.45;color:#bfd9c9;margin:0;max-width:820px}
 #cap>*{transition:opacity .25s} .fade>*{opacity:0}
-.tap{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(232,178,58,.45);border:3px solid #E8B23A;pointer-events:none;animation:tap .6s ease-out forwards;z-index:9}
+.tap{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(197,239,106,.45);border:3px solid #c5ef6a;pointer-events:none;animation:tap .6s ease-out forwards;z-index:9}
 @keyframes tap{from{transform:scale(.4);opacity:1}to{transform:scale(1.4);opacity:0}}
 </style></head><body class="${layout}">
 <div id="app"><iframe allow="clipboard-read; clipboard-write" src="${BASE}/" width="${layout === 'phone' ? 390 : 1280}" height="${layout === 'phone' ? 844 : 730}"></iframe></div>
@@ -81,7 +81,7 @@ async function tour({ slug, role, layout, accent, ua, steps }) {
   const page = await ctx.newPage();
   await page.setContent(stage(layout, role, accent));
   const app = page.frameLocator('iframe');
-  await app.getByText('Who’s signing in?').waitFor();
+  await app.getByText('Small talks. Deep roots.').waitFor();
   await page.evaluate(() => document.fonts.ready);
 
   const t = (s, o) => app.getByText(s, o).filter({ visible: true }).first();
@@ -147,115 +147,54 @@ const IPHONE_UA = devices['iPhone 14'].userAgent;
 const DESK_UA = devices['Desktop Chrome'].userAgent;
 
 // ---------------------------------------------------------------- tours ---
-console.log('Recording student…');
+console.log('Recording the parent…');
 await tour({
-  slug: '1-student', role: 'Student · Maya, 13', layout: 'phone', accent: '#E8B23A', ua: IPHONE_UA,
+  slug: '1-parent', role: 'Parent · Maya', layout: 'phone', accent: '#c5ef6a', ua: IPHONE_UA,
   steps: [
-    { title: 'Install it from Safari or Chrome', text: 'No app store. On iPhone: Share → Add to Home Screen. On Android or desktop Chrome: tap Install. It opens full screen, with its own icon, and works offline.' },
-    { title: 'Students sign up on their own', text: 'Username + password, no email. Parents are optional and only ever see what the student shares. In this demo the cards open example accounts.', do: async ({ t }) => t('Who’s signing in?').scrollIntoViewIfNeeded() },
-    { title: 'The Burrow', text: 'Maya’s home: 124 acorns, a 9-day streak, Burrow level 3 and 36 acorns to the garden room. Tonight’s quests sit underneath.', do: async ({ t, tap }) => tap(t('I’m a student')) },
-    { title: 'Daily check-in', text: 'One tap: how heavy is today? Nothing is pre-selected, so Pip never suggests an answer.', do: async ({ t, tap }) => tap(t('Check in', { exact: true })) },
-    { title: 'Pip reacts to each answer', text: 'The sky over the Burrow changes from sunny to stormy, and Pip’s reply and the next step change with it.', dwell: 900,
-      do: async ({ r, tap, wait }) => { for (const n of ['1, Light', '2, Okay', '3, Medium', '5, A lot', '4, Heavy']) { await tap(r('radio', { name: n })); await wait(1100); } } },
-    { title: 'A private note, only for Pip', text: 'Optional. Notes are stored apart from everything else and never reach a parent, the school or the logs.',
-      do: async ({ app, type }) => type(app.getByLabel(/Anything on your mind/).filter({ visible: true }).first(), 'big science thing tomorrow') },
-    { title: 'Pip makes the night smaller', text: 'Because today feels heavy, the science lab is split into 3 short steps. The boss battle on Friday shows prep progress. +5 acorns for checking in.',
-      do: async ({ r, tap }) => tap(r('button', { name: 'Make it smaller' })) },
-    { title: 'Focus sprint', text: 'A real countdown for the next step, capped at 25 minutes. Pip studies along.', do: async ({ r, tap }) => tap(r('button', { name: /focus sprint/ })) },
-    { title: 'Pause, and hints that aren’t answers', text: 'Pause takes a breath. “Get a hint” nudges without giving the answer away.',
-      do: async ({ r, tap, wait }) => { await tap(r('button', { name: 'Pause' })); await wait(1300); await tap(r('button', { name: 'Resume' })); await wait(600); await tap(r('button', { name: 'Get a hint' })); } },
-    { title: 'Step done, rewards land', text: 'Back in the Burrow: 129 acorns, a 10-day streak, and the lab moves to step 3 of 3.', do: async ({ r, tap }) => tap(r('button', { name: 'I finished this step' })) },
-    { title: 'Finish the quest', text: 'Ticking the last step completes the quest and pays its 15 acorns. Un-ticking takes them back.',
-      do: async ({ r, tap, wait }) => { await tap(r('tab', { name: 'Quests' })); await wait(900); await tap(r('checkbox', { name: /Answer the 2 conclusion/ })); await wait(900); await tap(r('tab', { name: 'Burrow' })); } },
-    { title: 'Maya controls what Mom sees', text: 'Four switches, owned by the student. Mood is shared as a weekly average, never each day’s answer. Notes, messages and location are always private.',
-      do: async ({ r, tap }) => tap(r('tab', { name: 'Me' })) },
-    { title: 'Turn a switch on', text: 'Maya decides to share upcoming tests. It applies to Mom’s summary immediately.', do: async ({ r, tap }) => tap(r('switch', { name: 'Upcoming tests' })) },
-    { title: 'Preview exactly what Mom sees', text: 'The same summary her parent receives, built from the same rules. No surprises.', do: async ({ t, tap }) => tap(t(/Friday summary →/)) },
+    { title: 'Install it from Safari or Chrome', text: 'No app store. iPhone: Share → Add to Home Screen. Android or desktop Chrome: Install. It opens full screen and works offline.' },
+    { title: 'Parents only', text: 'Kids never use Rooted and have no account. The parent signs in with email and password; the demo opens an example family.', do: async ({ r, tap }) => tap(r('button', { name: 'Try the demo' })) },
+    { title: 'Tonight’s starter', text: 'Ava has a math test tomorrow, so tonight’s question is about the test: “What part of Math test feels most ready?”, with a tip on how to ask it in the car.', do: async ({ t }) => t(/Tonight with Ava|Another one for Ava/).scrollIntoViewIfNeeded() },
+    { title: 'Try another', text: 'Every question comes from a library a person on the team reviewed. Rooted picks among them; nothing is generated on the fly.', do: async ({ r, tap }) => tap(r('button', { name: 'Try another' })) },
+    { title: 'Where are you two tonight?', text: 'Car ride, dinner, bedtime, a walk. The moment is logged with the talk so the team learns where questions land.', do: async ({ r, tap }) => tap(r('button', { name: 'Car ride' })) },
+    { title: 'I asked it', text: 'One tap at pickup. Then the phone goes away.', do: async ({ r, tap }) => tap(r('button', { name: 'I asked it' })) },
+    { title: 'How did it go?', text: 'Four seeds, from “Not tonight” to “We really talked”. “Not tonight” is a valid answer; nothing is scored.', do: async ({ r, tap }) => tap(r('radio', { name: 'Good talk' })) },
+    { title: 'A note for you', text: 'What Ava said, or what to ask next time. Notes stay on this device. They are never uploaded.',
+      do: async ({ app, type }) => type(app.getByLabel('A note for you (optional)').filter({ visible: true }).first(), 'She wants to redo the fractions page. Ask Thursday.') },
+    { title: 'The week updates', text: 'Back home: one more talk this week. Counts, not streaks. The design system calls this “invite, never grade”.', do: async ({ r, tap }) => tap(r('button', { name: 'Save', exact: true })) },
+    { title: 'Two kids', text: 'Leo is in 8th grade. Switch kids and the starter follows: his robotics showcase is this week.', do: async ({ r, tap }) => tap(r('button', { name: /Leo, Grade 8/ })) },
   ],
 });
 
-console.log('Recording parent…');
+console.log('Recording the week…');
 await tour({
-  slug: '2-parent', role: 'Parent · Ana, Maya’s mom', layout: 'phone', accent: '#DCEBD2', ua: IPHONE_UA,
+  slug: '2-week', role: 'Sunday planning', layout: 'phone', accent: '#ddf2e3', ua: IPHONE_UA,
   steps: [
-    { title: 'Maya’s week', text: 'Check-ins, quests finished and the streak, if Maya shares them. Mood shows as weekly averages for five weeks.', do: async ({ t, tap }) => tap(t('I’m a parent')) },
-    { title: 'Win, watch, and what to say', text: 'Plain-language highlights built only from what’s shared, plus one calm line to try at dinner.',
-      do: async ({ t }) => t('Try saying tonight').scrollIntoViewIfNeeded() },
-    { title: 'Send a cheer', text: 'One tap. Pip delivers it in the Burrow.', do: async ({ r, tap }) => tap(r('button', { name: 'Send a cheer' })) },
-    { title: 'Get human help', text: 'For anything bigger than study habits: the school counselor first, then vetted coaches and a partner clinic.', do: async ({ r, tap }) => tap(r('link', { name: 'Get help' })) },
-    { title: 'A message, drafted for you', text: 'Pick who to contact and EarlySignal drafts the first message. Copy it into email or text.',
-      do: async ({ r, tap, wait }) => { await tap(r('radio', { name: /Executive-function coach/ })); await wait(1000); await tap(r('button', { name: 'Copy message' })); } },
-    { title: 'Crisis line, always visible', text: 'If a child may be in danger: call or text 988 (U.S.).', do: async ({ t }) => t(/call or text/).scrollIntoViewIfNeeded() },
-    { title: 'Your kids', text: 'Linked kids, who they sign in as, a password reset (there is no email to reset through), and Unlink. No consent paperwork, no passwords to hand out.', do: async ({ r, tap }) => tap(r('tab', { name: 'Account' })) },
-    { title: 'Reset a forgotten password', text: 'Kids forget. The linked parent sets a new one and tells them. Nothing is emailed anywhere.',
-      do: async ({ r, tap, type, app }) => { await tap(r('button', { name: /Reset Maya’s password/ })); await type(app.getByLabel(/New password for Maya/).filter({ visible: true }).first(), 'NewAcorns2026!'); } },
-    { title: 'Saved', text: 'Maya signs in with the new password next time.', do: async ({ r, tap }) => tap(r('button', { name: 'Save new password' })) },
+    { title: 'The week', text: 'Everything the parent entered: a math test, a soccer game, a showcase, a dance. Two weeks at a glance.', do: async ({ r, t, tap, wait }) => { await tap(r('button', { name: 'Try the demo' })); await wait(900); await tap(r('tab', { name: 'Week' })); } },
+    { title: 'Three questions per event', text: 'Tap an event: three questions for before it happens, and three different ones for after.', do: async ({ t, tap }) => tap(t('Math test').first()) },
+    { title: 'Add to the week', text: 'What is it, what kind, and when. That’s the whole Sunday check-in.', do: async ({ r, tap, type, app, wait }) => { await tap(r('button', { name: 'Add', exact: true })); await wait(600); await type(app.getByLabel('What is it?').filter({ visible: true }).first(), 'Spelling bee'); await tap(r('button', { name: 'Presentation' })); } },
+    { title: 'On the calendar', text: 'The new event has its questions immediately, and tonight’s starter will pick it up.', do: async ({ r, tap }) => tap(r('button', { name: 'Add', exact: true })) },
+    { title: 'Grow: what happened this week', text: 'Talks this month, weeks with a talk, the topic that landed best. Never a score on the relationship, never a comparison with other families.', do: async ({ r, tap }) => tap(r('tab', { name: 'Grow' })) },
+    { title: 'Which questions worked', text: 'Family feedback becomes the team’s signal: this is what we would learn from the pilot.', do: async ({ t }) => t('Questions that worked').scrollIntoViewIfNeeded() },
+    { title: 'Your notes', text: 'Recent talks with the parent’s own notes, read from this device only.', do: async ({ t }) => t('Recent talks').scrollIntoViewIfNeeded() },
+    { title: 'Family: what Rooted knows', text: 'A first name, a grade, interests and the events you type. Nothing from the kid, ever. Delete everything in one tap.', do: async ({ r, tap }) => tap(r('tab', { name: 'Family' })) },
   ],
 });
 
-console.log('Recording sign-up and linking…');
+console.log('Recording a new parent…');
 await tour({
-  slug: '5-signup-link', role: 'New student · Sam', layout: 'phone', accent: '#E8B23A', ua: IPHONE_UA,
+  slug: '3-new-parent', role: 'New parent · Jordan', layout: 'phone', accent: '#f3e8dd', ua: IPHONE_UA,
   steps: [
-    { title: 'A new student signs up', text: 'Username, password, a name for Pip to use, grade (optional) and “I’m 13 or older”. No email, no parent needed. Thirty seconds.',
-      do: async ({ t, tap, type, app, r }) => {
-        await tap(t('Try a brand-new student account'));
+    { title: 'Create an account', text: 'Email and password. Thirty seconds. No app store, no invitation, nothing sent to the kid.',
+      do: async ({ r, tap, type, app }) => {
+        await tap(r('button', { name: 'Create my own account' }));
         const f = (l) => app.getByLabel(l).filter({ visible: true }).first();
-        await type(f('Username'), 'sam_2026'); await type(f('Password'), 'Acorns2026!'); await type(f(/What should Pip call you/), 'Sam'); await type(f(/Grade/), '7');
-        await tap(r('checkbox', { name: 'I’m 13 or older' }));
+        await type(f('Your name'), 'Jordan Lee'); await type(f('Email'), 'jordan@example.com'); await type(f('Password'), 'Acorns2026!');
       } },
-    { title: 'An empty Burrow, with a clear next step', text: 'No quests yet, so the Burrow asks for the first one.', do: async ({ r, tap }) => tap(r('button', { name: 'Create my account' })) },
-    { title: 'Add homework', text: 'Type the assignment, pick a type and a due date. Pip previews the split before you add it.',
-      do: async ({ r, tap, type, app }) => { await tap(r('button', { name: /Add your first quest/ })); await type(app.getByLabel('What is it?').filter({ visible: true }).first(), 'Science lab write-up'); await tap(r('radio', { name: 'Writing' })); } },
-    { title: 'Pip splits it into steps', text: 'Three timed steps with hints that nudge, never answer. Tests become boss battles worth 30 acorns.', do: async ({ r, tap }) => tap(r('button', { name: 'Add to my plan' })) },
-    { title: 'Or pick a study habit', text: 'When the plan is thin, a small library of habits: a study spot, 20 minutes of reading, packing the bag tonight.',
-      do: async ({ r, tap, wait }) => { await tap(r('button', { name: 'Add a quest' })); await wait(700); await tap(r('tab', { name: 'Study habits' })); await wait(900); await tap(r('button', { name: /Pack your bag tonight/ })); } },
-    { title: 'Invite a parent, optionally', text: 'On Me: a 6-letter code. The parent signs up and types it. Good for 7 days, one use.',
-      do: async ({ r, tap, wait }) => { await tap(r('tab', { name: 'Me' })); await wait(700); await tap(r('button', { name: 'Add a parent' })); } },
-    { title: 'The parent types the code', text: 'Ana signs in, opens Account, and links Sam. From now on she sees Sam’s weekly summary, built only from what Sam shares.',
-      do: async ({ t, r, tap, type, app, wait }) => {
-        const code = (await t(/^[A-Z2-9]{6}$/).textContent()).trim();
-        await tap(r('button', { name: 'Sign out' })); await wait(800); await tap(t('I’m a parent')); await wait(900);
-        await tap(r('tab', { name: 'Account' })); await wait(700); await tap(r('button', { name: 'Link another kid' })); await wait(500);
-        await type(app.getByLabel('Your kid’s code').filter({ visible: true }).first(), code); await tap(r('button', { name: 'Link', exact: true }));
-      } },
-    { title: 'Two kids, one summary each', text: 'Chips switch between Maya and Sam. Sam has one check-in to show so far.', do: async ({ r, tap, wait }) => { await tap(r('tab', { name: 'Summary' })); await wait(800); await tap(r('tab', { name: 'Sam' })); } },
-  ],
-});
-
-console.log('Recording privacy rules…');
-await tour({
-  slug: '3-privacy', role: 'The rules, live', layout: 'phone', accent: '#F9DCC8', ua: IPHONE_UA,
-  steps: [
-    { title: 'Maya writes a private note', text: 'A hard day, and a note she doesn’t want anyone else to read.',
-      do: async ({ t, r, tap, type, app }) => {
-        await tap(t('I’m a student')); await tap(t('Check in', { exact: true })); await tap(r('radio', { name: '5, A lot' }));
-        await type(app.getByLabel(/Anything on your mind/).filter({ visible: true }).first(), 'please don’t tell mom about the quiz');
-      } },
-    { title: 'And stops sharing her mood', text: 'She turns off “Weekly mood trend” and “Quests finished”.',
-      do: async ({ r, tap, wait }) => { await tap(r('button', { name: 'Pick one thing' })); await wait(700); await tap(r('tab', { name: 'Me' })); await wait(700); await tap(r('switch', { name: 'Weekly mood trend' })); await wait(500); await tap(r('switch', { name: 'Quests finished' })); } },
-    { title: 'Mom’s view respects it', text: 'Mood and check-ins read “private”. The note is nowhere: it was never part of what a parent can receive.',
-      do: async ({ r, t, tap, wait }) => { await tap(r('button', { name: 'Sign out' })); await wait(800); await tap(t('I’m a parent')); } },
-    { title: 'The school sees even less', text: 'The counselor only sees families who opted in, and only the signals each student shares. Never notes, messages or grades.',
-      do: async ({ r, t, tap, wait }) => { await tap(r('tab', { name: 'Account' })); await wait(600); await tap(r('button', { name: 'Sign out' })); await wait(800); await tap(t('School or clinic admin')); await wait(900); await tap(r('button', { name: 'All families' })); } },
-    { title: 'Every view and change is audited', text: 'Diagnostics shows the redacted event log: sign-ins, sharing changes, who viewed whose summary. The note text is redacted before it’s logged.',
-      do: async ({ go }) => go('/diagnostics') },
-  ],
-});
-
-console.log('Recording admin…');
-await tour({
-  slug: '4-admin', role: 'Admin', layout: 'desk', accent: '#E8B23A', ua: DESK_UA,
-  steps: [
-    { title: 'Partner dashboard (web) · Ms. Patel, school counselor', text: 'Families enrolled, weekly self-starters, who needs follow-up and open referrals. Only opted-in families count.', do: async ({ t, tap }) => tap(t('School or clinic admin')) },
-    { title: 'Patterns, not raw data', text: 'Stress 4+ for 3 weeks, check-ins that stopped, quest steps missed before tests. Conclusions only, from what each student shares.' },
-    { title: 'All families', text: 'Every opted-in family, flagged first. Families that didn’t opt in never appear.', do: async ({ r, tap }) => tap(r('button', { name: 'All families' })) },
-    { title: 'See what a family shares', text: '“View” lists the signals this student shares. Nothing more.', do: async ({ r, tap }) => tap(r('button', { name: 'View' })) },
-    { title: 'Suggest an EF coach', text: 'A referral is created and joins the queue on the right.',
-      do: async ({ r, tap, wait }) => { await tap(r('button', { name: 'Needs follow-up (3)' })); await wait(700); await tap(r('button', { name: 'Suggest coach' })); } },
-    { title: 'Reach out', text: 'Mark a family as contacted.', do: async ({ r, tap }) => tap(r('button', { name: 'Reach out' })) },
-    { title: 'Referrals', text: 'Every open referral and its status.', do: async ({ r, tap }) => tap(r('link', { name: 'Referrals' })) },
-    { title: 'Observability built in', text: 'Diagnostics: release, session, install state and the redacted audit log. In production the same events stream to your log platform.', do: async ({ go }) => go('/diagnostics') },
+    { title: 'Two minutes to set up', text: 'Tell us about your kid, then what’s on their week.', do: async ({ r, tap }) => tap(r('button', { name: 'Create account' })) },
+    { title: 'Step 1: the kid', text: 'First name, grade, a few interests. Starters use the name.',
+      do: async ({ r, tap, type, app, wait }) => { await tap(r('button', { name: 'Add your kid' })); await wait(600); await type(app.getByLabel('First name').filter({ visible: true }).first(), 'Sam'); await tap(r('button', { name: 'Grade 7' })); await tap(r('button', { name: 'Robotics' })); await tap(r('button', { name: 'Soccer', exact: true })); } },
+    { title: 'Step 2: the week', text: 'A soccer tryout on Thursday.', do: async ({ r, tap, type, app, wait }) => { await tap(r('button', { name: 'Next: their week' })); await wait(600); await type(app.getByLabel('What is it?').filter({ visible: true }).first(), 'Soccer tryout'); await tap(r('button', { name: 'Tryout or audition' })); } },
+    { title: 'Tonight with Sam', text: 'The first starter is about the tryout: “What are you hoping the coach notices?” Ready for the car ride home.', do: async ({ r, tap }) => tap(r('button', { name: 'Add and finish' })) },
   ],
 });
 
@@ -269,14 +208,14 @@ execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0'
 rmSync(TMP, { recursive: true, force: true });
 
 // README.md
-const title = { '1-student': 'Student', '2-parent': 'Parent', '5-signup-link': 'Sign up and link a parent', '3-privacy': 'The privacy rules, live', '4-admin': 'Admin (web)' };
-let md = `# EarlySignal walkthrough\n\nRecorded from the production web build with mock data. Regenerate with \`npm run build:web && npm run walkthrough\`.\n\n`;
+const title = { '1-parent': 'The core loop', '2-week': 'Sunday planning and Grow', '3-new-parent': 'A new parent, from zero' };
+let md = `# Rooted walkthrough\n\nRecorded from the production web build with demo data. Regenerate with \`npm run build:web && npm run walkthrough\`.\n\n`;
 md += `**Full video:** [0-full-walkthrough.mp4](0-full-walkthrough.mp4)\n\n| Point of view | Video |\n|---|---|\n`;
 for (const s of doc) md += `| ${title[s.slug]} | [${s.slug}.mp4](${s.slug}.mp4) |\n`;
 for (const s of doc) {
   md += `\n## ${title[s.slug]}\n\n_${s.role}_ · [video](${s.slug}.mp4)\n\n`;
   s.steps.forEach((st, i) => {
-    md += `### ${i + 1}. ${st.title}\n\n${st.text}\n\n<img src="screens/${st.file}" alt="${st.title}" width="${s.slug === '4-admin' ? 720 : 300}">\n\n`;
+    md += `### ${i + 1}. ${st.title}\n\n${st.text}\n\n<img src="screens/${st.file}" alt="${st.title}" width="${300}">\n\n`;
   });
 }
 writeFileSync(join(OUT, 'README.md'), md);

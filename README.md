@@ -1,157 +1,68 @@
-# EarlySignal
+# Rooted
 
-Better study habits for kids. Calm, early signals for families.
+**Know what to ask your kid, and when.** Rooted is a parent-only app for parents of middle and high schoolers. On Sunday you add what’s on your kid’s week (a math test, a tryout, a dance). At pickup you get one question worth asking about it, with a tip on how to ask. One tap says how it went. Kids never use the app and have no account.
 
-One Expo (React Native) app with role-based sign-in: **student**, **parent** and **admin**. Student and parent run on iOS, Android and web. The admin partner dashboard is web-only: on a phone, an admin sees a "use a computer" screen.
+Built for Chicago Booth New Venture Strategy (Nov 2026). Product brief: `docs/product-brief.md`. Design system: https://claude.ai/artifact/PJ8CZsmtkn22WKNqRqnSCk.
 
-Built from the *EarlySignal App Mockups* Claude Design canvas: same screens, colours (exact hex), fonts (Bricolage Grotesque + Nunito Sans) and copy.
+## Try it
 
-Two backends, same screens: **demo data on the device** (the default, `src/data/seed.ts`) and **Supabase** (real accounts, Postgres with the four rules enforced in the database). Set `EXPO_PUBLIC_SUPABASE_URL` and `_PUBLISHABLE_KEY` to switch. The public GitHub Pages build runs on demo data.
+| | URL | Data |
+|---|---|---|
+| **Demo** | https://angelaaaateng.github.io/earlysignal-nvs/ | Example family on your device (Maya, with Ava in 6th grade and Leo in 8th). Tap **Try the demo**. |
+| **Real app** | https://earlysignal-nvs.vercel.app | Your own account (Supabase). Tester login in `docs/TESTING.md`. |
 
-## Run it
+Both install as a phone app from Safari (Share → Add to Home Screen) or Chrome (Install) and work offline after the first load. Video and screenshots: `docs/walkthrough/`.
+
+## The core loop (MVP, brief §10)
+
+1. **Sunday check-in** (Grow tab): see the week that was, add next week’s events.
+2. **During the week** (Home): tonight’s starter is about the nearest event, before or after it. “Try another” rotates within the reviewed library. Three questions per event live on the Week tab.
+3. **After the talk** (I asked it): four seeds from “Not tonight” to “We really talked”, where you were, and an optional note that **stays on the device**.
+4. **Next week**: questions this kid rated “Not tonight” sink; ones that landed rise; anything asked in the last ten days is skipped.
+
+## Product principles, enforced in code
+
+| Principle | Where |
+|---|---|
+| Parent-only; no child data | There is no child account type anywhere. `kids` holds a first name, grade, interests and activities. |
+| Share effort, never content | Notes are written to the device only (`src/data/notes.ts`); the database never sees them (`e2e/core-loop.spec.ts` proves a note never reaches the audit log). |
+| Invite, never grade | No streaks, scores or comparisons. `src/domain/stats.ts` counts talks and weeks-with-a-talk; “Not tonight” never counts against anyone. |
+| Reviewed library, not generation | Every question is a hand-written entry in `src/domain/library.ts` (27 event prompts across 9 event kinds, before and after, plus 14 generic). The app only chooses among them (`src/domain/suggest.ts`). |
+| One parent cannot see another | Row-level security on every table; `supabase/tests/rls.test.ts` proves it on a real Postgres. |
+
+## Stack
+
+Expo SDK 58 / React Native / TypeScript, Expo Router (`src/app`), one codebase for web (PWA), iOS and Android. Supabase (Postgres + Auth) behind a backend seam (`src/data/backend.ts`) with an on-device mock for the demo. Fonts: Plus Jakarta Sans and Geist Mono. Tokens from the design system in `src/ui/theme.ts`.
 
 ```bash
 npm install
-npm run web          # dev server; or npm run ios / npm run android (Expo Go)
-npm run check        # typecheck + lint + unit tests
-npm run build:web    # production web build → dist/ (the installable app)
-npm run serve:web    # serve dist/ on :8080 with production headers
-npm run test:e2e     # end-to-end on iPhone, Android and desktop profiles (needs build:web)
-npm run walkthrough  # re-record the video + screenshot walkthrough (needs build:web)
+npx expo start --web            # dev, demo data
+npm run build:web && npm run serve:web   # production web build on :8080
+npm run check                   # typecheck, lint, unit, database rules
+npm run test:e2e                # Playwright against the production build
+npm run walkthrough             # re-record docs/walkthrough
 ```
 
-On the sign-in screen, each card signs in a demo account: Maya (student, 11), Ana (Maya's mom), Ms. Patel (counselor at Lincoln Middle School). `/diagnostics` has a **Reset demo data** button.
-
-**Walkthrough:** [docs/walkthrough/README.md](docs/walkthrough/README.md): a captioned video per point of view (student, parent, privacy rules live, admin), a combined 3-minute video, and a screenshot of every step.
-
-## Use it as a phone app, without an app store
-
-The web build is an installable web app (PWA). Once it's hosted on an HTTPS URL:
-
-- **iPhone / iPad (Safari):** open the link → Share → **Add to Home Screen**.
-- **Android (Chrome):** open the link → tap **Install** on the banner (or ⋮ → Install app).
-- **Desktop Chrome / Edge:** the install icon in the address bar.
-
-It then opens full screen with its own icon, keeps its data between launches, and works offline: the service worker precaches every screen at install. A new deploy is picked up on the next launch. The sign-in screen shows the right install hint for the browser.
-
-Pieces: `public/manifest.json`, `public/index.html` (iOS home-screen tags, `viewport-fit=cover` for the notch), `public/sw.js` + `scripts/postbuild-web.mjs` (per-build cache name and precache list), icons generated from Pip by `npm run icons`.
-
-**Live, two deployments:**
-- **Demo (mock data):** https://angelaaaateng.github.io/earlysignal-nvs/ (GitHub Pages; redeploys on every push to `main`). The role cards open example accounts.
-- **Real accounts (Supabase):** https://earlysignal-nvs.vercel.app (Vercel; `vercel.json` sets the Supabase URL and publishable key at build time). Students sign up with a username and password; parents are optional and link with a code the student shows.
-
-## Observability and logging
-
-`src/observability/` is vendor-neutral; adding Sentry, Datadog or OpenTelemetry means adding a sink.
-
-- **Structured logs.** Every entry is JSON: time, level, category (`app`, `audit`, `metric`, `nav`, `error`), event, session id, release (git sha), platform, user id and role.
-- **Redaction by default.** Values under keys like `note`, `text`, `draft`, `name`, `birth`, `message` are replaced with `[redacted]` before any sink sees them. A private note can't reach a log, and unit and e2e tests check this.
-- **Audit trail.** Every write (`checkin.submit`, `sharing.update`, `student.account.create_with_consent`, `referral.suggest_coach`, …) is logged with who did it, the outcome and timing. So is every view of someone else's data (`parent.summary.view`, `admin.dashboard.view`).
-- **Errors.** A root error boundary shows a calm "try again" screen and logs the crash. Uncaught errors and promise rejections are captured on web and native.
-- **Metrics.** App-ready time, screen views, action latency.
-- **Sinks.** Console (dev); in-memory ring buffer, kept on the device on web (redacted), shown at `/diagnostics`; and an HTTP batch sink, switched on by setting `EXPO_PUBLIC_LOG_ENDPOINT` (add its origin to `connect-src` in `scripts/headers.mjs`).
-- **Server.** `scripts/serve.mjs` writes one JSON access-log line per request.
-
-## Testing and CI
-
-- **Unit (Jest, 28 tests):** the four access rules in the mock domain, the check-in and quest loop, COPPA, logger redaction.
-- **Database (Jest + pg, 20 tests):** the real migration on Postgres, queried as each role with no app code: the four rules, account creation, audit log, consent withdrawal and deletion.
-- **End-to-end (Playwright, 44 runs):** against the production build, on iPhone 14, Pixel 7 and desktop profiles. Covers the full student loop, the parent summary and help, the COPPA flow, the admin dashboard, private notes never reaching parent, admin or logs, live sharing changes, role guards on typed URLs, persistence across reloads, PWA install metadata, offline launch, deep links, security headers, the audit log and zero console errors.
-- **CI:** `.github/workflows/ci.yml` runs typecheck, lint, unit, database rules (Postgres 17 service), e2e (with a report on failure) and an iOS + Android bundle build, on every PR and push to `main`.
-- **Security headers:** CSP, `X-Frame-Options: DENY`, `nosniff`, a strict referrer policy and a Permissions-Policy that blocks camera, microphone and location. Hashed build files are cached for a year; HTML and the service worker are never cached.
+Real backend: set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (both public by design; `vercel.json` sets them for the Vercel deploy). `EXPO_PUBLIC_FORCE_MOCK=1` forces the demo.
 
 ## Backend (Supabase)
 
-`supabase/migrations/20261105000000_schema.sql` is the whole backend: tables, row-level security, and the functions the app calls. `supabase/tests/rls.test.ts` runs that migration against a real Postgres and hits it **as each role, with no app code**, to prove the rules hold for anyone who talks to the database directly (20 tests, in CI on Postgres 17).
+`supabase/migrations/20261110000000_rooted.sql` is the whole backend: `parents`, `kids`, `events`, `talks`, `week_reviews`, `audit_log`. Every row carries `parent_id` (defaulted to `auth.uid()`), and every policy is `parent_id = auth.uid()`. A trigger creates the parent row on sign-up; `delete_my_account()` removes everything. Sign-in is email + password; Supabase “Confirm email” stays OFF (no mail provider yet).
 
-**How people sign in and get accounts**
+Database rule tests (`npm run test:db`, 7 tests on Postgres 17 in CI) run the migration and hit it as two parents and anonymous: isolation, cascade deletes, audit, anon gets nothing.
 
-| Who | Sign-in | Account comes from |
-|---|---|---|
-| Student (13+) | Username + password. No email. | **Get started** on the sign-in screen: `sign_up_student()` creates the auth user and profile after the student ticks “I’m 13 or older”. |
-| Parent | Email + password | **I’m a parent** → create account. A trigger creates the parent row and their family. No email is sent, so Supabase “Confirm email” stays OFF. The parent then types the 6-letter code from the student’s Me screen (`redeem_parent_link_code`). |
-| Admin | Email + password | Invite only: an `admin_invites` row must exist for the email (see `supabase/seed`). Hidden from the sign-in screen; reachable at `/admin`. |
+## Testing and CI
 
-Forgot password: a linked parent resets it from their Account tab (`reset_child_password`). Testers: see `docs/TESTING.md`.
+- **Unit (Jest, 16 tests):** library rules (open questions, under 15 words, every kind covered before and after), suggestion ranking, counting rules, ownership checks in writes, logger redaction.
+- **Database (7 tests):** see above.
+- **End-to-end (Playwright, 32 runs):** iPhone 14, Pixel 7 and desktop Chrome against the production build: the core loop, the week, Sunday check-in, a new parent from zero, PWA install metadata, offline launch, security headers, audit log, zero console errors.
+- **CI:** `.github/workflows/ci.yml` on every push to `main`: typecheck, lint, unit, database rules, e2e, iOS + Android bundle.
+- **Live smoke:** `node scripts/smoke/live.mjs` runs the loop against the real project with throwaway accounts and checks a second parent sees nothing.
 
-**Where the four rules live in the database**
+## Observability
 
-| Rule | Mechanism |
-|---|---|
-| Parents see only what the student shares | `parent_weekly_summary()` reads `sharing_settings` and adds only shared fields. Per-day scores never leave: no parent policy exists on `check_ins`. Only the student can update `sharing_settings` (RLS). |
-| Admins see only families that opted in | `admin_can_see_family()` gates every admin policy and function: same org **and** `families.admin_opt_in`. The parent controls opt-in (`set_family_admin_opt_in`). |
-| Private notes are never shared | `private_notes` has exactly one policy: the student's own rows. No parent or admin policy exists, and projections never read the table. |
-| COPPA consent before any under-13 account | `create_student()` is the only path that inserts a student; under 13 it requires a matching, unused, unrevoked `parental_consents` row. `revoke_consent_and_delete_student()` deletes everything. |
+`src/observability/`: structured JSON logs with redaction (keys like `note`, `name`, `question` content never reach a sink), audit events for every write, error boundary, metrics, `/diagnostics` screen, optional HTTP sink via `EXPO_PUBLIC_LOG_ENDPOINT`.
 
-Every write and every view of someone else's data lands in `audit_log` with the actor.
+## Not in this build
 
-**Set up a project** (once you have a Supabase account):
-
-```bash
-npx supabase login
-npx supabase link --project-ref <ref>
-npx supabase db push                          # applies supabase/migrations
-# optional pilot org + admin invite: edit the email, then run supabase/seed/seed_pilot.sql in the SQL editor
-cp .env.example .env.local                     # fill in the URL and publishable key from Project Settings → API
-```
-
-In the dashboard: Auth → Providers → Email: keep "Confirm email" off (the app uses one-time codes), and change the Magic Link template to include `{{ .Token }}` so the email carries a code. Auth → URL configuration: add the site URL(s).
-
-**Run the database tests locally** without Docker:
-
-```bash
-eval "$(npm run -s db:local)"    # starts a throwaway Postgres (needs postgresql installed) and exports TEST_DATABASE_URL
-npm run test:db
-```
-
-## Layout
-
-```
-e2e/                   Playwright end-to-end specs
-scripts/               web build, static server + headers, icons, walkthrough recorder
-public/                PWA manifest, HTML template, service worker, icons
-supabase/              migrations (the backend), RLS tests, CLI config, pilot seed
-src/
-  app/                 Expo Router screens (one file per canvas artboard)
-    index.tsx          0  · Sign in (pick a role)
-    student/           S1 Burrow · S2 check-in · S3 quests · S4 focus · S5 me (sharing) · preview
-    parent/            P1 weekly summary · P2 help · account · add-child (COPPA flow)
-    admin/             A1 partner dashboard (web)
-    diagnostics.tsx    support screen: release, install state, redacted logs, reset
-  domain/              Pure TypeScript. Data model, access rules, mutations. No React.
-    types.ts           users, orgs, families, consents, check-ins, private notes, quests,
-                       quest steps, acorns, sharing settings, cheers, referrals, help contacts
-    access.ts          role checks, family membership, admin opt-in gate
-    student.ts         the student's own view
-    parent.ts          parent weekly summary projection
-    admin.ts           admin dashboard projection
-    coppa.ts           parental consent + the only student-account creation path
-    mutations.ts       every write, each checked against the acting user
-  data/                backend.ts (the seam), mockBackend.ts, supabaseBackend.ts, AppStore (session + loading)
-  lib/supabase.ts      Supabase client (session persisted on device)
-  observability/       Structured logger, redaction, sinks, global error capture
-  pwa/                 Service worker registration, install prompt and banner
-  ui/                  Theme tokens, Pip, icons, shared components
-```
-
-## The four rules, and where they're enforced
-
-Screens never compute access. They render a projection the domain layer returns for the signed-in user, and every rule has tests in `src/domain/__tests__/rules.test.ts`.
-
-| Rule | Enforced in | How |
-|---|---|---|
-| Parents see only what the student shares | `parent.ts › parentWeeklySummary` | Each field is added only if its sharing toggle is on. Mood is weekly averages only; per-day scores never leave the function. Only the student can change toggles (`mutations.ts › setSharing`). |
-| Admins see only families that opted in | `access.ts › adminVisibleFamilies` | Every admin read and action goes through this gate (family `adminOptIn` AND same org). Inside opted-in families, the student's own sharing settings still apply. |
-| Private notes are never shared | `types.ts`, `student.ts › ownNoteForToday` | Notes live in their own table. Only the student's own read touches it; parent and admin projections never do. Tests stringify both projections and check no note text appears. |
-| COPPA consent before any under-13 account exists | `coppa.ts › createStudentAccount` | The only way to create a student. Under 13 needs a matching, unused, unrevoked consent from a parent in that family, recorded first. There is no create-then-backfill path. |
-
-**When a backend is chosen, these rules must move server-side** (row-level security or API checks), with these same tests run against it. The client checks alone are not a security boundary.
-
-## Where the build differs from the canvas
-
-- **Parent mood chart shows weekly averages, not days.** The canvas parent screen has per-day bars ("Mon 2, Tue 3…"), but the student's sharing screen promises "the average, not each day's answer." The build keeps the promise and keeps the chart's look: 5 bars, one per week.
-- **Upcoming tests are hidden from the parent by default**, matching the canvas's toggle state (4th switch off). So the "Watch" card doesn't mention the Friday quiz unless Maya turns it on.
-- **Generated copy**: Win / Watch / Try-saying text, admin patterns and KPIs are computed from data, so they read close to the canvas but not word for word.
-- **Not on the canvas, built in its style**: the install banner on sign-in; `/diagnostics`; the crash screen; parent Account and the add-a-child / consent flow; a "Sign out" link on the student Me screen; after-check-in states on the Burrow; a "pick a number" empty state on check-in (no pre-selected score); the student preview of the parent summary.
-- **Admin sidebar**: Families, Follow-ups and Referrals work. Invite families and Reports show a "not designed yet" panel.
-- **Out of scope for now**: Pip's hints are canned per step (no AI); the "Pip asks you first… unless you might be unsafe" escalation is not implemented and needs a clinically reviewed design; consent verification (card check etc.) is simulated.
+Smart-timing notifications, AI learning beyond the ranking rules above, the growing family tree, badges, community prompts, parent groups, calendar sync, topic packs, co-parent sharing, payments, app-store builds, password reset (needs a mail provider).

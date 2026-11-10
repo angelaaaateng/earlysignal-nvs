@@ -1,43 +1,43 @@
-# EarlySignal — product one-pager
+# Rooted — product one-pager
 
-**Live:** https://earlysignal-nvs.vercel.app · **Demo:** https://angelaaaateng.github.io/earlysignal-nvs/ · **Code:** github.com/angelaaaateng/earlysignal-nvs · **Status:** working pilot build, 6 Nov 2026
+**Live:** https://earlysignal-nvs.vercel.app · **Demo:** https://angelaaaateng.github.io/earlysignal-nvs/ · **Code:** github.com/angelaaaateng/earlysignal-nvs · **Status:** working MVP for the pilot, 10 Nov 2026
+
+## One line
+
+Rooted tells busy parents what to ask their middle schooler, and when, then turns those conversations into a habit. The kid never uses the app. **[Team]**
 
 ## The problem
 
-Middle schoolers (13–14) lose ground on study habits quietly. By the time a parent or counselor notices, it shows up as grades, not as the three weeks of heavy days that came first. Existing tools are either homework trackers built for adults, or surveillance apps that teens route around.
+Around grades 6 to 8, kids share less at home and parents default to “How was school?”, which gets “Fine.” Parents who feel uncomfortable raising a topic raise it far less often (Gallup/Walton 2024: 33% vs 61% among parents worried about social media). **[Research]** Monitoring apps answer “where is my kid?”, not “how is my kid?”. **[Team]**
 
-## The product
+## The bet
 
-A calm, teen-owned study companion with a fox named Pip. Three things, nothing more:
+A question about *this week’s* math test is worth the effort of entering the test on Sunday, where a generic tip would go unread. A four-week randomized text program changed how parents rated communication (MyTeen, JAMA Netw Open 2019); coaching on one topic made teens report talking about that topic more (Ford et al., 2019). Neither tested calendar-based prompts. The pilot does. **[Research] / [Assumption]**
 
-1. **A 10-second daily check-in.** “How heavy is today?” on a 1–5 scale, plus an optional private note that nobody else can ever read.
-2. **Quests.** The student types tonight’s homework; Pip splits it into 2–4 timed steps with hints that nudge rather than answer. Tests become “boss battles”. A small library of study habits fills an empty plan. Steps earn acorns, acorns grow the Burrow, check-ins build a streak.
-3. **A weekly summary a parent can see, if the student allows it.** The student holds four switches: mood trend (weekly average only), quests finished, streak and level, upcoming tests. The parent sees exactly what is switched on, in plain language, with one calm line to try at dinner.
+## What the MVP does (features 1–7 of the brief)
 
-## Why it is different
+1. **Kid profile:** first name, grade, interests, activities.
+2. **Schedule input:** tests, tryouts, games, performances, projects, presentations, dances, trips.
+3. **Questions from the schedule:** three per event, different before and after, drawn from a library a person on the team wrote and reviewed. The app chooses; it does not generate.
+4. **Parent chooses and asks in person.** “Try another” rotates the pick. A tip names a real moment: in the car, while cooking.
+5. **One tap afterwards:** “Not tonight”, “A few words”, “Good talk”, “We really talked” (stored as the brief’s 1–10 rating). Plus where you were.
+6. **Feedback shapes the next pick:** questions this kid rated “Not tonight” sink, ones that landed rise, nothing repeats within ten days.
+7. **Sunday check-in:** the week that was (talks, weeks with a talk, top topic, which questions worked), then add next week.
 
-- **Student-first by construction.** The student creates the account (username + password, no email) and owns the data. A parent is optional and joins only by typing a 6-letter code the student shows them.
-- **Privacy is enforced in the database, not the UI.** Row-level security means a parent, a school, or a bug in a screen cannot read a private note or a per-day score. Twenty automated tests hit Postgres as each role to prove it.
-- **Early signals, not raw data.** Trends and counts, never diaries. The parent gets “three heavy days this week”, not Tuesday’s note.
-- **No app store, no install friction.** A progressive web app: open the link, add to home screen, works offline.
+**Principles, enforced in code:** parent-only, no child data; notes stay on the device and never reach the server; counts not streaks, no scores, no comparisons; one `primary` action per screen; every question open-ended and under 15 words.
 
-## Who it is for
+## What exists
 
-- **Primary:** students 13+, first and foremost 7th–9th grade.
-- **Secondary:** their parents, who want a signal before the report card without reading their kid’s diary.
-- **Later:** school counselors and clinics. The data model and an admin dashboard exist (hidden in this build) for opted-in families only.
+One Expo/React Native codebase (web now, iOS/Android from the same code), installable from Safari or Chrome, offline-capable. Supabase backend with row-level security so one parent can never see another’s family. 16 unit, 7 database-rule and 32 browser tests in CI. Design system applied: Plus Jakarta Sans, speech-bubble cards, moss/canopy/spark palette.
 
-## What exists today
+## Pilot (brief §10, evidence brief §76)
 
-One Expo/React Native codebase (web now, iOS/Android via the same code). Supabase (Postgres + Auth) backend. 28 unit tests, 20 database-rule tests, 44 end-to-end browser tests across iPhone, Pixel and desktop, run in CI on every push. Structured, redacted audit logging. Video walkthrough and screenshots in `docs/walkthrough/`.
+30 Boston-area parents of 6th graders, four weeks. Within each family, alternate event-specific and generic prompts on comparable moments; compare parent-confirmed asks over delivered prompts. Report week-four use among all 30, not just those still rating. Success: 2+ questions used per week, 50%+ active in week 4, rising ratings read alongside retention, and a real paid offer at the end.
 
-## Open questions for the pilot
+## Open questions
 
-1. Is one 1–5 score a day enough signal, or do sleep and “homework done?” need to join it?
-2. Reminders raise check-in rates but fight the calm brand. What is the right nudge?
-3. Buyer: parents (B2C) or schools (B2B, counselor dashboard as the wedge)?
-4. Proposed pilot: one grade, one school, four weeks. Success = 60% of students with 4+ check-ins a week by week 3, and at least one parent conversation that happened because of a summary.
+1. Will parents enter the schedule by hand, or is calendar sync a prerequisite? 2. Is the four-seed check-in enough signal, or does the 1–10 slider earn its friction? 3. Do parents want a social layer at all? 4. $9.99 or $12.99 a month, free tier of three questions a week: what do interviews say?
 
 ## Not in this build
 
-Push notifications and email of any kind, app-store listings, password reset without a linked parent, admin onboarding UI, quest editing (remove and re-add), localization.
+Smart-timing notifications, response tips after the first answer, the growing family tree, badges, community prompts, school groups, calendar sync, topic packs, co-parent sharing, payments, app-store listing.

@@ -7,11 +7,11 @@ import { log } from '../observability/logger';
  * the native app keep their state between launches. Bump SCHEMA when the Db
  * shape changes; older saves are discarded rather than migrated.
  *
- * This holds mock data only. With a real backend, the device keeps at most a
- * session token; private notes live server-side, encrypted, student-scoped.
+ * This holds mock data only. With a real backend, the device keeps a session
+ * token and the parent's own notes (src/data/notes.ts), nothing else.
  */
-const KEY = 'earlysignal.state';
-const SCHEMA = 1;
+const KEY = 'rooted.state';
+const SCHEMA = 2;
 
 interface Saved {
   schema: number;
@@ -25,7 +25,7 @@ export async function loadState(): Promise<Saved | null> {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as Saved;
-    if (s.schema !== SCHEMA || !s.db?.users) {
+    if (s.schema !== SCHEMA || !s.db?.parents) {
       log.warn('state.discarded', { reason: 'schema', schema: s.schema });
       return null;
     }

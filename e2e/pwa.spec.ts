@@ -6,7 +6,7 @@ test.describe('Installable web app (PWA)', () => {
     const res = await request.get('/manifest.json');
     expect(res.ok()).toBe(true);
     const m = await res.json();
-    expect(m).toMatchObject({ name: 'EarlySignal', display: 'standalone', start_url: '/', theme_color: '#3A2416' });
+    expect(m).toMatchObject({ name: 'Rooted', display: 'standalone', start_url: '/', theme_color: '#123a28' });
     const sizes = m.icons.map((i: { sizes: string }) => i.sizes);
     expect(sizes).toEqual(expect.arrayContaining(['192x192', '512x512']));
     expect(m.icons.some((i: { purpose?: string }) => i.purpose === 'maskable')).toBe(true);
@@ -23,22 +23,21 @@ test.describe('Installable web app (PWA)', () => {
 
   test('service worker registers and the app opens offline', async ({ page, context }) => {
     await page.goto('/');
-    await expect(text(page, 'Who’s signing in?')).toBeVisible();
+    await expect(text(page, 'Small talks. Deep roots.')).toBeVisible();
     const scope = await page.evaluate(async () => (await navigator.serviceWorker.ready).scope);
     expect(scope).toMatch(/\/$/);
-    // Let the worker take control and cache the build files, then go offline.
     await page.reload();
-    await expect(text(page, 'Who’s signing in?')).toBeVisible();
+    await expect(text(page, 'Small talks. Deep roots.')).toBeVisible();
     await context.setOffline(true);
     await page.reload();
-    await expect(text(page, 'Who’s signing in?')).toBeVisible();
-    await text(page, 'I’m a student').click();
-    await expect(text(page, /^Hi, Maya$/)).toBeVisible();
+    await expect(text(page, 'Small talks. Deep roots.')).toBeVisible();
+    await page.getByRole('button', { name: 'Try the demo' }).click();
+    await expect(text(page, /^Good (morning|afternoon|evening)$/)).toBeVisible();
     await context.setOffline(false);
   });
 
   test('deep links work (SPA fallback) and security headers are set', async ({ request }) => {
-    const res = await request.get('/student/quests');
+    const res = await request.get('/week');
     expect(res.status()).toBe(200);
     expect(await res.text()).toContain('<div id="root">');
     const h = res.headers();

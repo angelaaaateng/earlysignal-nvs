@@ -1,192 +1,96 @@
 /**
- * EarlySignal data model.
- *
- * Every table here maps 1:1 to a future backend table. Access rules live in
- * `policy.ts`, not in screens: screens only ever receive role-scoped views.
+ * Rooted data model. Parent-only: there are no child accounts and nothing
+ * here is ever written by or shown to a kid. Every row belongs to one parent.
  */
 
-export type Role = 'student' | 'parent' | 'admin';
-
-/** ISO calendar date in the user's local time, e.g. "2026-11-04". */
+/** ISO calendar date in the parent's local time, e.g. "2026-11-10". */
 export type DateKey = string;
 
-export interface User {
+export interface Parent {
   id: string;
-  role: Role;
   displayName: string;
-  /** Students only. Used for the COPPA age gate. */
-  birthDate?: DateKey;
-  /** Students only. School grade, shown to partner admins. */
-  grade?: number;
-  /** Students only: the name they sign in with. */
-  username?: string;
-  /** Students only: when they confirmed they are 13 or older. */
-  ageAttestedAt?: string;
-  /** Admins only. The school or clinic they work for. */
-  orgId?: string;
   createdAt: string;
 }
 
-export interface Org {
-  id: string;
-  name: string;
-  kind: 'school' | 'clinic';
-}
-
-export interface FamilyMember {
-  userId: string;
-  /** How the student refers to this parent, e.g. "Mom". */
-  relationship?: string;
-}
-
-export interface Family {
-  id: string;
-  parents: FamilyMember[];
-  studentIds: string[];
-  /** The partner org this family enrolled through, if any. */
-  orgId?: string;
-  /**
-   * Family-level opt-in to the partner admin dashboard. Admins see a family
-   * only when this is true AND the family belongs to their org.
-   */
-  adminOptIn: boolean;
-  enrolledAt: string;
-}
-
-/** COPPA: verifiable parental consent, recorded before an under-13 account exists. */
-export interface ParentalConsent {
+/** A kid as the parent describes them. Name, grade and interests only. */
+export interface Kid {
   id: string;
   parentId: string;
-  familyId: string;
-  childFirstName: string;
-  childBirthDate: DateKey;
-  method: 'card_check' | 'signed_form' | 'video_call';
-  /** Plain-language notice version the parent agreed to. */
-  noticeVersion: string;
-  grantedAt: string;
-  /** Set once the student account is created under this consent. */
-  studentId?: string;
-  revokedAt?: string;
-}
-
-export type CheckInScore = 1 | 2 | 3 | 4 | 5;
-
-export interface CheckIn {
-  id: string;
-  studentId: string;
-  date: DateKey;
-  score: CheckInScore;
-  createdAt: string;
-}
-
-/**
- * Stored apart from `CheckIn` on purpose. Nothing outside the student's own
- * view reads this table; see `policy.ts`.
- */
-export interface PrivateNote {
-  id: string;
-  checkInId: string;
-  studentId: string;
-  text: string;
-  createdAt: string;
-}
-
-export interface Quest {
-  id: string;
-  studentId: string;
-  title: string;
-  kind: 'quest' | 'boss';
-  /** Due date. For a boss battle, the test date. */
-  dueDate: DateKey;
-  teacher?: string;
-  /** Acorns awarded when every step is done. */
-  acorns: number;
-  /** Free-form timing hint shown on single-step quests, e.g. "before bed". */
-  when?: string;
-  /** Reward copy for boss battles, e.g. "rare item waiting". */
-  reward?: string;
-  completedAt?: string;
-  createdAt: string;
-}
-
-export interface QuestStep {
-  id: string;
-  questId: string;
-  order: number;
-  label: string;
-  minutes: number;
-  /** A nudge Pip can give. Hints, never answers. */
-  hint?: string;
-  doneAt?: string;
-}
-
-export interface AcornEntry {
-  id: string;
-  studentId: string;
-  amount: number;
-  reason: 'check_in' | 'quest' | 'bonus';
-  refId?: string;
-  at: string;
-}
-
-/** Owned and edited by the student only. */
-export interface SharingSettings {
-  studentId: string;
-  moodTrend: boolean;
-  questsFinished: boolean;
-  streakAndLevel: boolean;
-  upcomingTests: boolean;
-  updatedAt: string;
-}
-
-export type SharingKey = keyof Omit<SharingSettings, 'studentId' | 'updatedAt'>;
-
-export interface Cheer {
-  id: string;
-  fromParentId: string;
-  studentId: string;
-  sentAt: string;
-  deliveredAt?: string;
-}
-
-export type ReferralTarget = 'counselor' | 'ef_coach' | 'clinic';
-export type ReferralStatus = 'requested' | 'waitlist' | 'booked' | 'scheduled' | 'closed';
-
-export interface Referral {
-  id: string;
-  familyId: string;
-  studentId: string;
-  orgId: string;
-  target: ReferralTarget;
-  /** Display name of who they were referred to, e.g. "EF coach". */
-  targetLabel: string;
-  status: ReferralStatus;
-  /** For scheduled meetings, a short label like "Today 2pm". */
-  when?: string;
-  createdAt: string;
-}
-
-export interface HelpContact {
-  id: string;
-  familyId: string;
   name: string;
-  sub: string;
-  tag: 'Free' | 'Paid' | 'Referral';
-  draft: string;
+  grade: number;
+  interests: string[];
+  activities: string[];
+  createdAt: string;
+}
+
+export type EventKind = 'test' | 'tryout' | 'game' | 'performance' | 'project' | 'presentation' | 'social' | 'trip' | 'other';
+
+/** Something on the kid's week that a question can be about. */
+export interface KidEvent {
+  id: string;
+  kidId: string;
+  title: string;
+  kind: EventKind;
+  date: DateKey;
+  createdAt: string;
+}
+
+/** The parent's after-talk reflection. "Not tonight" is a valid answer. */
+export type Outcome = 'not_tonight' | 'few_words' | 'good_talk' | 'really_talked';
+
+/** One question the parent asked, and how it went. Notes stay on the device. */
+export interface Talk {
+  id: string;
+  parentId: string;
+  kidId: string;
+  eventId?: string;
+  promptId: string;
+  question: string;
+  moment?: Moment;
+  outcome: Outcome;
+  askedAt: string;
+}
+
+export type Moment = 'car' | 'dinner' | 'bedtime' | 'walk' | 'other';
+
+/** The parent marked a week as planned (the Sunday check-in). */
+export interface WeekReview {
+  parentId: string;
+  weekStart: DateKey;
+  reviewedAt: string;
 }
 
 export interface Db {
-  users: User[];
-  orgs: Org[];
-  families: Family[];
-  consents: ParentalConsent[];
-  checkIns: CheckIn[];
-  privateNotes: PrivateNote[];
-  quests: Quest[];
-  questSteps: QuestStep[];
-  acorns: AcornEntry[];
-  sharing: SharingSettings[];
-  cheers: Cheer[];
-  referrals: Referral[];
-  helpContacts: HelpContact[];
+  parents: Parent[];
+  kids: Kid[];
+  events: KidEvent[];
+  talks: Talk[];
+  weekReviews: WeekReview[];
 }
+
+export const OUTCOME_LABEL: Record<Outcome, string> = {
+  not_tonight: 'Not tonight',
+  few_words: 'A few words',
+  good_talk: 'Good talk',
+  really_talked: 'We really talked',
+};
+
+/** The 1–10 rating the brief asks for, derived from the four seeds. */
+export const OUTCOME_RATING: Record<Outcome, number> = { not_tonight: 2, few_words: 5, good_talk: 8, really_talked: 10 };
+
+export const MOMENT_LABEL: Record<Moment, string> = { car: 'Car ride', dinner: 'Dinner', bedtime: 'Bedtime', walk: 'Out for a walk', other: 'Somewhere else' };
+
+export const EVENT_KIND_LABEL: Record<EventKind, string> = {
+  test: 'Test or quiz',
+  tryout: 'Tryout or audition',
+  game: 'Game or match',
+  performance: 'Performance or recital',
+  project: 'Project due',
+  presentation: 'Presentation',
+  social: 'Party, dance or sleepover',
+  trip: 'Field trip',
+  other: 'Something else',
+};
+
+export const INTEREST_OPTIONS = ['Soccer', 'Basketball', 'Swimming', 'Dance', 'Theater', 'Music', 'Robotics', 'Art', 'Gaming', 'Reading', 'Cooking', 'Animals', 'Coding', 'Science', 'Fashion', 'YouTube'];
+export const ACTIVITY_OPTIONS = ['Soccer practice', 'Band', 'Orchestra', 'Debate', 'Student council', 'Math club', 'Swim team', 'Dance class', 'Drama club', 'Robotics team', 'Piano lessons', 'Scouts', 'Tutoring', 'Volunteering'];

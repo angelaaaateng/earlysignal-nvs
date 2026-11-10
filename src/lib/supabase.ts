@@ -31,7 +31,7 @@ export function supabase(): SupabaseClient {
       detectSessionInUrl: Platform.OS === 'web',
       flowType: 'pkce',
     },
-    global: { headers: { 'x-client-info': `earlysignal/${process.env.EXPO_PUBLIC_RELEASE ?? 'dev'}` } },
+    global: { headers: { 'x-client-info': `rooted/${process.env.EXPO_PUBLIC_RELEASE ?? 'dev'}` } },
   });
   if (Platform.OS !== 'web') {
     AppState.addEventListener('change', (state) => {

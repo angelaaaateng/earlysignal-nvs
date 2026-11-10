@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type DependencyList, type ReactNode } from 'react';
-import type { Role, User } from '../domain/types';
+import type { Parent } from '../domain/types';
 import { SUPABASE_CONFIGURED } from '../lib/supabase';
 import { log, setLogContext } from '../observability/logger';
 import type { Backend, Session, SignInResult } from './backend';
@@ -23,7 +23,7 @@ export const USING_MOCK_DATA = !USE_SUPABASE;
 interface Store {
   backend: Backend;
   session: Session | null;
-  user: User | null;
+  user: Parent | null;
   now: Date;
   /** False until the saved session has been checked. */
   hydrated: boolean;
@@ -52,7 +52,7 @@ export function AppProvider({ children, backend: given }: { children: ReactNode;
   const apply = useCallback((s: Session | null) => {
     sessionRef.current = s;
     setSession(s);
-    setLogContext(s ? { userId: s.user.id, role: s.user.role } : {});
+    setLogContext(s ? { userId: s.user.id, role: 'parent' } : {});
   }, []);
 
   useEffect(() => {
@@ -63,7 +63,7 @@ export function AppProvider({ children, backend: given }: { children: ReactNode;
       .catch((e) => log.error('session.restore_failed', e))
       .finally(() => alive && setHydrated(true));
     const t = setInterval(() => setNow(new Date()), 60_000);
-    const unsub = (backend as MockBackend).subscribe?.(() => setVersion((v) => v + 1));
+    const unsub = backend.subscribe?.(() => setVersion((v) => v + 1));
     return () => {
       alive = false;
       clearInterval(t);
@@ -76,7 +76,7 @@ export function AppProvider({ children, backend: given }: { children: ReactNode;
       const r = await fn(backend);
       if (r.ok) {
         apply(r.session);
-        log.audit('auth.sign_in', { role: r.session.user.role, backend: backend.kind });
+        log.audit('auth.sign_in', { backend: backend.kind });
       } else {
         log.warn('auth.sign_in_failed', { backend: backend.kind });
       }
@@ -130,15 +130,11 @@ export function useApp(): Store {
   return s;
 }
 
-/** The signed-in session, asserted to have `role`. Layout guards make this safe. */
-export function useSession(role: Role): Session {
+/** The signed-in parent. Layout guards make this safe. */
+export function useSession(): Session {
   const { session } = useApp();
-  if (!session || session.user.role !== role) throw new Error(`Expected a signed-in ${role}`);
+  if (!session) throw new Error('Expected a signed-in parent');
   return session;
-}
-
-export function useViewer(role: Role): User {
-  return useSession(role).user;
 }
 
 export interface Loaded<T> {

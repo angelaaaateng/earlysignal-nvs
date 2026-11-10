@@ -73,7 +73,7 @@ export const ringSink: Sink = (e) => {
  * still shows what happened before a reload or crash. Entries are already
  * redacted when they reach a sink.
  */
-const STORE_KEY = 'earlysignal.logs';
+const STORE_KEY = 'rooted.logs';
 const STORE_SIZE = 200;
 
 export function restorePersistedLogs() {

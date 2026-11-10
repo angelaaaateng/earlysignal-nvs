@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "EarlySignal",
-    "slug": "earlysignal",
+    "name": "Rooted",
+    "slug": "rooted",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,7 +11,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#3A2416",
+        "backgroundColor": "#123a28",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -28,6 +28,6 @@
       "expo-status-bar",
       "expo-font"
     ],
-    "scheme": "earlysignal"
+    "scheme": "rooted"
   }
 }
