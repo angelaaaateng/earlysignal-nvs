@@ -27,16 +27,17 @@ function score(p: Prompt, kid: Kid, talks: Talk[], today: DateKey): number {
     if (t.outcome === 'not_tonight') s -= 3;
     if (t.outcome === 'really_talked' || t.outcome === 'good_talk') s += 2;
   }
-  // A kid with a few talks behind them gets the deeper questions.
+  // A kid with a few talks behind them gets the deeper questions on equal footing (ties go to the lighter one).
   const kidTalks = talks.filter((t) => t.kidId === kid.id && t.outcome !== 'not_tonight').length;
-  if (kidTalks >= 4 && p.depth === 2) s += 2;
+  if (kidTalks >= 4 && p.depth === 2) s += 1;
   // Interest-matching: a friends question for a social kid, interests for a hobbyist.
   if (p.topic === 'interests' && kid.interests.length > 0) s += 1;
   return s;
 }
 
-function stable<T extends { id: string }>(xs: T[], seed: string) {
-  // Rotate by a hash of the seed so "Try another" and different days vary without randomness.
+function stable<T extends { id: string }>(xs: T[], seed: string, variant = 0) {
+  // The first pick is the best-ranked one; "Try another" rotates by a hash of the seed, without randomness.
+  if (variant === 0) return xs;
   let h = 0;
   for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   const n = xs.length;
@@ -57,7 +58,7 @@ export function suggestForEvent(kid: Kid, event: KidEvent, talks: Talk[], today:
   const ranked = [...pool].sort((a, b) => score(b, kid, talks, today) - score(a, kid, talks, today) || a.id.localeCompare(b.id));
   const when = relativeDay(today, event.date);
   const context = phase === 'before' ? `Before ${event.title} (${when})` : `After ${event.title} (${when})`;
-  return stable(ranked, `${event.id}:${variant}`)
+  return stable(ranked, `${event.id}:${variant}`, variant)
     .slice(0, n)
     .map((p) => ({ promptId: p.id, question: fill(p.question, kid.name, event.title), tip: p.tip, topic: p.topic, eventId: event.id, context, phase }));
 }
@@ -65,7 +66,7 @@ export function suggestForEvent(kid: Kid, event: KidEvent, talks: Talk[], today:
 /** Generic starters when nothing is on the calendar. */
 export function suggestGeneric(kid: Kid, talks: Talk[], today: DateKey, n = 3, variant = 0): Suggestion[] {
   const ranked = [...GENERIC_PROMPTS].sort((a, b) => score(b, kid, talks, today) - score(a, kid, talks, today) || a.id.localeCompare(b.id));
-  return stable(ranked, `${kid.id}:${today}:${variant}`)
+  return stable(ranked, `${kid.id}:${today}:${variant}`, variant)
     .slice(0, n)
     .map((p) => ({ promptId: p.id, question: fill(p.question, kid.name), tip: p.tip, topic: p.topic, context: 'For any evening' }));
 }

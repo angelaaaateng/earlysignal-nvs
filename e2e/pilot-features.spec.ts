@@ -56,12 +56,12 @@ test.describe('Pilot features', () => {
     await page.getByRole('button', { name: 'Bedtime · 8 pm' }).click();
     await expect(text(page, /Demo: reminders are saved but not sent/)).toBeVisible();
     await tab(page, 'Grow');
-    await expect(text(page, 'The experiment')).toBeVisible();
+    await expect(text(page, 'The experiment')).toHaveCount(0);
     await tab(page, 'Family');
     await page.getByRole('switch', { name: 'Pilot mode' }).click();
-    await expect(page.getByRole('switch', { name: 'Pilot mode' })).toHaveAttribute('aria-checked', 'false');
+    await expect(page.getByRole('switch', { name: 'Pilot mode' })).toHaveAttribute('aria-checked', 'true');
     await tab(page, 'Grow');
-    await expect(text(page, 'The experiment')).toHaveCount(0);
+    await expect(text(page, 'The experiment')).toBeVisible();
   });
 
   test('the founding-family offer records interest once', async ({ page }) => {

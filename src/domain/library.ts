@@ -31,8 +31,8 @@ export const EVENT_PROMPTS: Prompt[] = [
   E('test-b1', ['test'], 'before', 'What part of {title} feels most ready?', 'Ask in the car. Start with what’s going well, not what isn’t.'),
   E('test-b2', ['test'], 'before', 'If you could pick one topic to skip on {title}, what would it be?', 'A sideways way in. Laugh with them about it.'),
   E('test-b3', ['test'], 'before', 'How do you like to get ready the night before something like this?', 'Let them tell you their system before you offer yours.', 'school', 2),
-  E('test-a1', ['test'], 'after', 'What was the first question on {title}?', 'Specific and easy to answer. The rest tends to follow.'),
-  E('test-a2', ['test'], 'after', 'Which part of {title} surprised you?', 'Works at dinner. Avoid asking for the score.'),
+  E('test-a1', ['test'], 'after', 'What question on {title} surprised you?', 'Works at dinner. Don’t ask what they got.'),
+  E('test-a2', ['test'], 'after', 'What was the first question on {title}?', 'Specific and easy to answer. The rest tends to follow.'),
   E('test-a3', ['test'], 'after', 'What would you tell a friend taking {title} tomorrow?', 'Puts them in the expert seat.', 'school', 2),
   // Tryouts and auditions
   E('tryout-b1', ['tryout'], 'before', 'What are you hoping the coach notices tomorrow?', 'Side by side, while packing the bag.'),

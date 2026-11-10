@@ -153,7 +153,7 @@ await tour({
   steps: [
     { title: 'Install it from Safari or Chrome', text: 'No app store. iPhone: Share → Add to Home Screen. Android or desktop Chrome: Install. It opens full screen and works offline.' },
     { title: 'Parents only', text: 'Kids never use Rooted and have no account. The parent signs in with email and password; the demo opens an example family.', do: async ({ r, tap }) => tap(r('button', { name: 'Try the demo' })) },
-    { title: 'Tonight’s starter', text: 'Ava has a math test tomorrow, so tonight’s question is about the test: “What part of Math test feels most ready?”, with a tip on how to ask it in the car.', do: async ({ t }) => t(/Tonight with Ava|Another one for Ava/).scrollIntoViewIfNeeded() },
+    { title: 'Tonight’s starter', text: 'Ava had a math test yesterday, so tonight’s question is about it: “What question on Tuesday’s math test surprised you?”, with a tip on how to ask it.', do: async ({ t }) => t(/Tonight with Ava|Another one for Ava/).scrollIntoViewIfNeeded() },
     { title: 'Try another', text: 'Every question comes from a library a person on the team reviewed. Rooted picks among them; nothing is generated on the fly.', do: async ({ r, tap }) => tap(r('button', { name: 'Try another' })) },
     { title: 'Where are you two tonight?', text: 'Car ride, dinner, bedtime, a walk. The moment is logged with the talk so the team learns where questions land.', do: async ({ r, tap }) => tap(r('button', { name: 'Car ride' })) },
     { title: 'I asked it', text: 'One tap at pickup. Then the phone goes away.', do: async ({ r, tap }) => tap(r('button', { name: 'I asked it' })) },
@@ -170,7 +170,7 @@ await tour({
   slug: '2-week', role: 'Sunday planning', layout: 'phone', accent: '#ddf2e3', ua: IPHONE_UA,
   steps: [
     { title: 'The week', text: 'Everything the parent entered: a math test, a soccer game, a showcase, a dance. Two weeks at a glance.', do: async ({ r, t, tap, wait }) => { await tap(r('button', { name: 'Try the demo' })); await wait(900); await tap(r('tab', { name: 'Week' })); } },
-    { title: 'Three questions per event', text: 'Tap an event: three questions for before it happens, and three different ones for after.', do: async ({ t, tap }) => tap(t('Math test').first()) },
+    { title: 'Three questions per event', text: 'Tap an event: three questions for before it happens, and three different ones for after.', do: async ({ t, tap }) => tap(t('Tuesday’s math test').first()) },
     { title: 'Add to the week', text: 'What is it, what kind, and when. That’s the whole Sunday check-in.', do: async ({ r, tap, type, app, wait }) => { await tap(r('button', { name: 'Add', exact: true })); await wait(600); await type(app.getByLabel('What is it?').filter({ visible: true }).first(), 'Spelling bee'); await tap(r('button', { name: 'Presentation' })); } },
     { title: 'On the calendar', text: 'The new event has its questions immediately, and tonight’s starter will pick it up.', do: async ({ r, tap }) => tap(r('button', { name: 'Add', exact: true })) },
     { title: 'Grow: what happened this week', text: 'Talks this month, weeks with a talk, the topic that landed best. Never a score on the relationship, never a comparison with other families.', do: async ({ r, tap }) => tap(r('tab', { name: 'Grow' })) },

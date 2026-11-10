@@ -22,13 +22,14 @@ export function buildSeed(now: Date): Db {
   });
 
   return {
-    parents: [{ id: IDS.parent, displayName: 'Maya Chen', createdAt: iso(-40), nudge: { enabled: false, hour: 17, tz: 'America/New_York' }, pilotMode: true }],
+    parents: [{ id: IDS.parent, displayName: 'Maya Chen', createdAt: iso(-40), nudge: { enabled: false, hour: 17, tz: 'America/New_York' }, pilotMode: false }],
     kids: [
       { id: IDS.ava, parentId: IDS.parent, name: 'Ava', grade: 6, interests: ['Soccer', 'Art', 'Animals'], activities: ['Soccer practice', 'Band'], createdAt: iso(-40) },
       { id: IDS.leo, parentId: IDS.parent, name: 'Leo', grade: 8, interests: ['Robotics', 'Gaming', 'Music'], activities: ['Robotics team'], createdAt: iso(-40) },
     ],
     events: [
-      { id: 'ev_math', kidId: IDS.ava, title: 'Math test', kind: 'test', date: addDays(monday, 1), createdAt: iso(-3) },
+      // Yesterday, whatever day the demo runs on: tonight's starter is always the "after" question about it.
+      { id: 'ev_math', kidId: IDS.ava, title: 'Tuesday’s math test', kind: 'test', date: addDays(today, -1), createdAt: iso(-3) },
       { id: 'ev_soccer', kidId: IDS.ava, title: 'Soccer game vs. Newton', kind: 'game', date: addDays(monday, 3), createdAt: iso(-3) },
       { id: 'ev_band', kidId: IDS.ava, title: 'Band concert', kind: 'performance', date: addDays(monday, 10), createdAt: iso(-3) },
       { id: 'ev_robot', kidId: IDS.leo, title: 'Robotics showcase', kind: 'presentation', date: addDays(monday, 4), createdAt: iso(-3) },
@@ -43,7 +44,7 @@ export function buildSeed(now: Date): Db {
       talk('t5', IDS.leo, 'g-friends-2', 'Who’s someone at school you’d like to know better?', 'not_tonight', -12),
       talk('t6', IDS.ava, 'g-feel-1', 'What’s one thing that would make tomorrow better?', 'good_talk', -9),
       talk('t7', IDS.ava, 'test-b1', 'What part of Science quiz feels most ready?', 'few_words', -5, 'ev_sci'),
-      talk('t8', IDS.ava, 'test-a2', 'Which part of Science quiz surprised you?', 'really_talked', -3, 'ev_sci'),
+      talk('t8', IDS.ava, 'test-a2', 'What was the first question on Science quiz?', 'really_talked', -3, 'ev_sci'),
       talk('t9', IDS.leo, 'g-fam-1', 'What’s one thing we should do more of as a family?', 'good_talk', -2),
       ...(dow >= 1 ? [talk('t10', IDS.ava, 'g-friends-1', 'Who made you laugh today?', 'good_talk', -dow)] : []),
     ],

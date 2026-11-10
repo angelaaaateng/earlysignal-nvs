@@ -48,9 +48,9 @@ test.describe('The week', () => {
     await signInDemo(page);
     await tab(page, 'Week');
     await expect(text(page, 'The week')).toBeVisible();
-    await text(page, 'Math test').first().click();
+    await text(page, 'Tuesday’s math test').first().click();
     await expect(page.getByRole('button', { name: 'I asked it' })).toHaveCount(3);
-    await expect(page.getByRole('heading').filter({ hasText: /Math test/ })).toHaveCount(2);
+    await expect(page.getByRole('heading').filter({ hasText: /math test/ })).toHaveCount(3);
 
     await page.getByRole('button', { name: 'Add' }).click();
     await page.getByLabel('What is it?').fill('Spelling bee');

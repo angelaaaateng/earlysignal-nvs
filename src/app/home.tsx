@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
-import { partOfDay, relativeDay, toDateKey, weekdayShort } from '@/domain/dates';
+import { monthDay, partOfDay, relativeDay, toDateKey, weekdayShort } from '@/domain/dates';
 import { SECOND_MOVE, TOPIC_LABEL } from '@/domain/library';
 import { monthCount, topTopic, weekView } from '@/domain/stats';
 import { armFor, nearestEvent, tonight } from '@/domain/suggest';
@@ -66,7 +66,7 @@ export default function Home() {
   const aside = (
     <>
       <View style={{ flexDirection: 'row', gap: S[3], flexWrap: 'wrap' }}>
-        <StatTile label="Talks this month" value={monthCount(h.talks, today)} note={`Since ${today.slice(5, 7) === '11' ? 'Nov' : 'the'} 1`} />
+        <StatTile label="Talks this month" value={monthCount(h.talks, today)} note={`Since ${monthDay(`${today.slice(0, 8)}01`)}`} />
         <StatTile label="Top topic" value={top ?? '—'} note={top ? `${kid.name}’s favorite` : 'After a few talks'} />
       </View>
 
