@@ -21,14 +21,18 @@ Everything in the demo stays on your device. `/diagnostics` has a **Reset demo d
 
 Open https://earlysignal-nvs.vercel.app → **Create an account** (name, email, password 8+). No confirmation email is sent. Then: **Add your kid** → their week → tonight’s starter. Delete the account any time from the Family tab.
 
-## Option C: shared tester login
+## Option C: shared tester logins
 
-| | |
-|---|---|
-| Email | `rooted.demo.parent@gmail.com` |
-| Password | `Rooted2026!` |
+All passwords are `Rooted2026!`. Sign in with **I already have an account**. Each tester has one kid and a few events this week; pick a different login per person so talks don't mix.
 
-Maya, with Ava in 6th grade and three events this week. Shared with other testers, so expect their talks and events too.
+| Email | Parent | Kid |
+|---|---|---|
+| `rooted.demo.parent@gmail.com` | Maya Chen | Ava, grade 6 (math test, soccer game, band concert) |
+| `rooted.tester1@gmail.com` | Dana Whitfield | Ella, grade 7 (history quiz, dance recital) |
+| `rooted.tester2@gmail.com` | Marcus Reed | Jalen, grade 6 (basketball tryout, science project) |
+| `rooted.tester3@gmail.com` | Priya Nair | Arjun, grade 8 (robotics showcase, fall dance) |
+
+These are placeholder addresses, not real inboxes. Nothing is ever emailed.
 
 ## What to look for
 
