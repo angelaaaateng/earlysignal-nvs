@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
 import { InstallBanner } from '@/pwa/InstallBanner';
 import { Button, ErrorLine, TextField } from '@/ui/Kit';
-import { Screen } from '@/ui/Screen';
+import { Screen, useLayout } from '@/ui/Screen';
 import { C, R, S, T } from '@/ui/theme';
 
 type Mode = 'pick' | 'signin' | 'signup';
@@ -35,11 +35,12 @@ export default function SignIn() {
     setMode(m);
     setError('');
   };
+  const { wide } = useLayout();
   const validEmail = /^\S+@\S+\.\S+$/.test(email);
   const validPassword = password.length >= 8;
 
   return (
-    <Screen contentStyle={{ paddingTop: 72, gap: S[6] }}>
+    <Screen narrow contentStyle={{ paddingTop: 72, gap: S[6] }} aside={wide ? <WhyRooted /> : undefined}>
       <InstallBanner />
       <View style={{ gap: S[2] }}>
         <Text style={[T.display, { fontSize: 44, lineHeight: 48, letterSpacing: -1.8 }]}>Rooted</Text>
@@ -86,5 +87,26 @@ export default function SignIn() {
       {mode === 'pick' && error ? <ErrorLine>{error}</ErrorLine> : null}
       <Text style={T.caption}>Zero data from kids. All the help goes to parents. Notes you write stay on this device.</Text>
     </Screen>
+  );
+}
+
+/** Desktop only: the pitch beside the sign-in card. */
+function WhyRooted() {
+  const rows = [
+    ['Sunday', 'Add what’s on your kid’s week: a math test, a tryout, a dance.'],
+    ['At pickup', 'One question about today, with a tip on how to ask it.'],
+    ['After', 'One tap says how it went. Your note stays on your device.'],
+  ];
+  return (
+    <View style={{ gap: S[4], paddingTop: 72 }}>
+      <Text style={T.overline}>How it works</Text>
+      {rows.map(([k, v]) => (
+        <View key={k} style={{ backgroundColor: C.bubble, borderRadius: R.lg, padding: S[5], gap: 4 }}>
+          <Text style={T.subhead}>{k}</Text>
+          <Text style={T.bodySm}>{v}</Text>
+        </View>
+      ))}
+      <Text style={T.caption}>“A question about today’s test is worth the effort of entering the test on Sunday.” That is the bet the pilot tests.</Text>
+    </View>
   );
 }

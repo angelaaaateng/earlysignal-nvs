@@ -19,8 +19,15 @@ export default function Family() {
     } else Alert.alert(title, msg, [{ text: 'Keep', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: go }]);
   };
 
+  const aside = (
+      <Card style={{ backgroundColor: C.sprout }}>
+        <Text style={T.subhead}>What Rooted knows</Text>
+        <Text style={T.body}>A first name, a grade, interests and the events you type in. Your kid never uses the app. Your notes stay on this device and are never uploaded.</Text>
+      </Card>
+  );
+
   return (
-    <Screen tabs="Family" contentStyle={{ gap: S[5] }}>
+    <Screen tabs="Family" contentStyle={{ gap: S[5] }} aside={aside}>
       <View>
         <Text style={T.overline}>Family</Text>
         <Text accessibilityRole="header" style={[T.display, { marginTop: S[1] }]}>
@@ -54,10 +61,6 @@ export default function Family() {
       ))}
       <Button label={h.kids.length ? 'Add another kid' : 'Add your kid'} icon="plus" variant={h.kids.length ? 'soft' : 'primary'} onPress={() => router.push('/kid')} />
 
-      <Card style={{ backgroundColor: C.sprout }}>
-        <Text style={T.subhead}>What Rooted knows</Text>
-        <Text style={T.body}>A first name, a grade, interests and the events you type in. Your kid never uses the app. Your notes stay on this device and are never uploaded.</Text>
-      </Card>
 
       <View style={{ gap: S[2], marginTop: S[4] }}>
         <Text style={T.overline}>Account</Text>

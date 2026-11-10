@@ -51,8 +51,47 @@ export default function Home() {
   const askedToday = h.talks.some((t) => t.kidId === kid.id && t.askedAt.slice(0, 10) === today && t.outcome !== 'not_tonight');
   const logHref = { pathname: '/log' as const, params: { kid: kid.id, prompt: s.promptId, question: s.question, context: s.context, ...(s.eventId ? { event: s.eventId } : {}), ...(moment ? { moment } : {}) } };
 
+  const aside = (
+    <>
+      <View style={{ flexDirection: 'row', gap: S[3], flexWrap: 'wrap' }}>
+        <StatTile label="Talks this month" value={monthCount(h.talks, today)} note={`Since ${today.slice(5, 7) === '11' ? 'Nov' : 'the'} 1`} />
+        <StatTile label="Top topic" value={top ?? '—'} note={top ? `${kid.name}’s favorite` : 'After a few talks'} />
+      </View>
+
+      <WeekRow title={`${week.talks} talk${week.talks === 1 ? '' : 's'} this week`} note="No streaks to protect. Every talk counts." days={week.days} />
+
+      <View style={{ gap: S[3] }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <Text accessibilityRole="header" style={T.heading}>
+            Coming up for {kid.name}
+          </Text>
+          <Pressable accessibilityRole="link" onPress={() => router.replace('/week')} hitSlop={12}>
+            <Text style={[T.label, { color: C.moss }]}>The week</Text>
+          </Pressable>
+        </View>
+        {upcoming.length === 0 ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/event', params: { kid: kid.id } })} style={{ backgroundColor: C.bubble, borderRadius: R.lg, padding: S[5], gap: 6 }}>
+            <Text style={T.subhead}>Nothing on the calendar yet</Text>
+            <Text style={T.bodySm}>Add a test, a game or a tryout and tonight’s starter will be about it.</Text>
+            <Text style={[T.label, { color: C.moss }]}>Add to {kid.name}’s week</Text>
+          </Pressable>
+        ) : (
+          upcoming.map((e) => (
+            <View key={e.id} style={{ backgroundColor: C.bubble, borderRadius: R.md, paddingVertical: S[3], paddingHorizontal: S[4], flexDirection: 'row', alignItems: 'center', gap: S[3] }}>
+              <View style={{ flex: 1 }}>
+                <Text style={T.subhead}>{e.title}</Text>
+                <Text style={T.caption}>{EVENT_KIND_LABEL[e.kind]}</Text>
+              </View>
+              <Text style={T.monoSm}>{relativeDay(today, e.date)}</Text>
+            </View>
+          ))
+        )}
+      </View>
+    </>
+  );
+
   return (
-    <Screen tabs="Home" contentStyle={{ gap: S[5] }}>
+    <Screen tabs="Home" contentStyle={{ gap: S[5] }} aside={aside}>
       <View>
         <Text style={T.overline}>
           {weekdayShort(today)} · {part}
@@ -99,40 +138,6 @@ export default function Home() {
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: S[3], flexWrap: 'wrap' }}>
-        <StatTile label="Talks this month" value={monthCount(h.talks, today)} note={`Since ${today.slice(5, 7) === '11' ? 'Nov' : 'the'} 1`} />
-        <StatTile label="Top topic" value={top ?? '—'} note={top ? `${kid.name}’s favorite` : 'After a few talks'} />
-      </View>
-
-      <WeekRow title={`${week.talks} talk${week.talks === 1 ? '' : 's'} this week`} note="No streaks to protect. Every talk counts." days={week.days} />
-
-      <View style={{ gap: S[3] }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <Text accessibilityRole="header" style={T.heading}>
-            Coming up for {kid.name}
-          </Text>
-          <Pressable accessibilityRole="link" onPress={() => router.replace('/week')} hitSlop={12}>
-            <Text style={[T.label, { color: C.moss }]}>The week</Text>
-          </Pressable>
-        </View>
-        {upcoming.length === 0 ? (
-          <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/event', params: { kid: kid.id } })} style={{ backgroundColor: C.bubble, borderRadius: R.lg, padding: S[5], gap: 6 }}>
-            <Text style={T.subhead}>Nothing on the calendar yet</Text>
-            <Text style={T.bodySm}>Add a test, a game or a tryout and tonight’s starter will be about it.</Text>
-            <Text style={[T.label, { color: C.moss }]}>Add to {kid.name}’s week</Text>
-          </Pressable>
-        ) : (
-          upcoming.map((e) => (
-            <View key={e.id} style={{ backgroundColor: C.bubble, borderRadius: R.md, paddingVertical: S[3], paddingHorizontal: S[4], flexDirection: 'row', alignItems: 'center', gap: S[3] }}>
-              <View style={{ flex: 1 }}>
-                <Text style={T.subhead}>{e.title}</Text>
-                <Text style={T.caption}>{EVENT_KIND_LABEL[e.kind]}</Text>
-              </View>
-              <Text style={T.monoSm}>{relativeDay(today, e.date)}</Text>
-            </View>
-          ))
-        )}
-      </View>
     </Screen>
   );
 }

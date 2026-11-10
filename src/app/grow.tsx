@@ -35,35 +35,8 @@ export default function Grow() {
     .slice(0, 3);
   const kidName = (id: string) => h.kids.find((k) => k.id === id)?.name ?? 'your kid';
 
-  return (
-    <Screen tabs="Grow" contentStyle={{ gap: S[5] }}>
-      <View>
-        <Text style={T.overline}>{rangeLabel(week.weekStart, addDays(week.weekStart, 6))}</Text>
-        <Text accessibilityRole="header" style={[T.display, { marginTop: S[1] }]}>
-          {week.talks === 0 ? 'A quiet week' : `${week.talks} talk${week.talks === 1 ? '' : 's'} this week`}
-        </Text>
-      </View>
-
-      <WeekRow title={week.realTalks > 0 ? `${week.realTalks} that really landed` : 'Pick up whenever you’re ready'} note="Small moments count. There’s nothing to catch up on." days={week.days} />
-
-      <View style={{ flexDirection: 'row', gap: S[3], flexWrap: 'wrap' }}>
-        <StatTile label="This month" value={monthCount(h.talks, today)} note="talks" />
-        <StatTile label="Weeks with a talk" value={`${weeks.n} of ${weeks.of}`} note="last four weeks" />
-        <StatTile label="Top topic" value={top ?? '—'} note={top ? 'what landed best' : 'after a few talks'} />
-      </View>
-
-      <View style={{ backgroundColor: nextPlanned ? C.sprout : C.canopy, borderRadius: R.xl, padding: S[6], gap: S[3] }}>
-        <Text style={[T.overline, { color: nextPlanned ? C.moss : C.spark }]}>Sunday check-in</Text>
-        <Text style={[T.title, { color: nextPlanned ? C.soil : C.onCanopy }]}>{nextPlanned ? 'Next week is planned.' : 'Plan next week in two minutes.'}</Text>
-        <Text style={[T.body, { color: nextPlanned ? C.soilMuted : '#bfd9c9' }]}>
-          {nextPlanned ? 'Add anything new as it comes up. Tonight’s starter will follow the calendar.' : 'Add what’s coming up and Rooted writes the questions. Tests, games, tryouts, a dance.'}
-        </Text>
-        <View style={{ flexDirection: 'row', gap: S[2], flexWrap: 'wrap' }}>
-          <Button label={nextPlanned ? 'Add another' : 'Add next week’s events'} variant={nextPlanned ? 'primary' : 'spark'} onPress={() => router.push({ pathname: '/event', params: { ...(h.kid ? { kid: h.kid.id } : {}), date: nextStart } })} />
-          {!nextPlanned && <Button label="Nothing new" variant="onCanopy" onPress={() => void act('week.review', (b, s) => b.markWeekReviewed(s, addDays(today, 7)))} />}
-        </View>
-      </View>
-
+  const aside = (
+    <>
       {worked.length > 0 && (
         <View style={{ gap: S[3] }}>
           <Text accessibilityRole="header" style={T.heading}>
@@ -93,6 +66,38 @@ export default function Grow() {
         ))}
       </View>
       <Text style={T.caption}>Notes stay on this device. Rooted never sends them anywhere.</Text>
+    </>
+  );
+
+  return (
+    <Screen tabs="Grow" contentStyle={{ gap: S[5] }} aside={aside}>
+      <View>
+        <Text style={T.overline}>{rangeLabel(week.weekStart, addDays(week.weekStart, 6))}</Text>
+        <Text accessibilityRole="header" style={[T.display, { marginTop: S[1] }]}>
+          {week.talks === 0 ? 'A quiet week' : `${week.talks} talk${week.talks === 1 ? '' : 's'} this week`}
+        </Text>
+      </View>
+
+      <WeekRow title={week.realTalks > 0 ? `${week.realTalks} that really landed` : 'Pick up whenever you’re ready'} note="Small moments count. There’s nothing to catch up on." days={week.days} />
+
+      <View style={{ flexDirection: 'row', gap: S[3], flexWrap: 'wrap' }}>
+        <StatTile label="This month" value={monthCount(h.talks, today)} note="talks" />
+        <StatTile label="Weeks with a talk" value={`${weeks.n} of ${weeks.of}`} note="last four weeks" />
+        <StatTile label="Top topic" value={top ?? '—'} note={top ? 'what landed best' : 'after a few talks'} />
+      </View>
+
+      <View style={{ backgroundColor: nextPlanned ? C.sprout : C.canopy, borderRadius: R.xl, padding: S[6], gap: S[3] }}>
+        <Text style={[T.overline, { color: nextPlanned ? C.moss : C.spark }]}>Sunday check-in</Text>
+        <Text style={[T.title, { color: nextPlanned ? C.soil : C.onCanopy }]}>{nextPlanned ? 'Next week is planned.' : 'Plan next week in two minutes.'}</Text>
+        <Text style={[T.body, { color: nextPlanned ? C.soilMuted : '#bfd9c9' }]}>
+          {nextPlanned ? 'Add anything new as it comes up. Tonight’s starter will follow the calendar.' : 'Add what’s coming up and Rooted writes the questions. Tests, games, tryouts, a dance.'}
+        </Text>
+        <View style={{ flexDirection: 'row', gap: S[2], flexWrap: 'wrap' }}>
+          <Button label={nextPlanned ? 'Add another' : 'Add next week’s events'} variant={nextPlanned ? 'primary' : 'spark'} onPress={() => router.push({ pathname: '/event', params: { ...(h.kid ? { kid: h.kid.id } : {}), date: nextStart } })} />
+          {!nextPlanned && <Button label="Nothing new" variant="onCanopy" onPress={() => void act('week.review', (b, s) => b.markWeekReviewed(s, addDays(today, 7)))} />}
+        </View>
+      </View>
+
     </Screen>
   );
 }

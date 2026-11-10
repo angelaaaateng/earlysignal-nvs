@@ -38,7 +38,7 @@ export default function LogTalk() {
   };
 
   return (
-    <Screen contentStyle={{ gap: S[5] }}>
+    <Screen narrow contentStyle={{ gap: S[5] }}>
       <BackButton onPress={() => goBack('/home')} label="Back" />
       <View>
         <Text style={T.overline}>{kid ? `You asked ${kid.name}` : 'You asked'}</Text>

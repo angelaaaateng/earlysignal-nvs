@@ -25,8 +25,17 @@ export default function Week() {
   for (const e of events) byDay.set(e.date, [...(byDay.get(e.date) ?? []), e]);
   const kidOf = (id: string) => h.kids.find((k) => k.id === id);
 
+  const aside = (
+    <View style={{ backgroundColor: C.bubble, borderRadius: R.lg, padding: S[5], gap: S[3] }}>
+      <Text style={T.overline}>How this works</Text>
+      <Text style={T.subhead}>One event, three questions</Text>
+      <Text style={T.bodySm}>Before it happens you get questions that open the door. After, questions about what actually happened. Tonight’s starter on Home follows whichever is nearest.</Text>
+      <Text style={T.bodySm}>Tip: add the whole week on Sunday. It takes two minutes and keeps the questions specific.</Text>
+    </View>
+  );
+
   return (
-    <Screen tabs="Week" contentStyle={{ gap: S[5] }}>
+    <Screen tabs="Week" contentStyle={{ gap: S[5] }} aside={aside}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <View>
           <Text style={T.overline}>

@@ -59,7 +59,7 @@ function Form({ existing, first }: { existing?: Kid; first: boolean }) {
   };
 
   return (
-    <Screen contentStyle={{ gap: S[5] }}>
+    <Screen narrow contentStyle={{ gap: S[5] }}>
       {!p.first && <BackButton onPress={() => goBack('/family')} label="Back" />}
       <View>
         <Text style={T.overline}>{p.first ? 'Step 1 of 2' : existing ? 'Edit' : 'New'}</Text>
