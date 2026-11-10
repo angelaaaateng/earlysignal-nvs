@@ -29,7 +29,7 @@ Kids never use Rooted and have no account. The parent signs in with email and pa
 
 ### 3. Tonight’s starter
 
-Ava has a math test tomorrow, so tonight’s question is about the test: “What part of Math test feels most ready?”, with a tip on how to ask it in the car.
+Ava had a math test yesterday, so tonight’s question is about it: “What question on Tuesday’s math test surprised you?”, with a tip on how to ask it.
 
 <img src="screens/1-parent-03.png" alt="Tonight’s starter" width="300">
 
