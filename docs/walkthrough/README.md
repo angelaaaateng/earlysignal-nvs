@@ -9,6 +9,7 @@ Recorded from the production web build with demo data. Regenerate with `npm run 
 | The core loop | [1-parent.mp4](1-parent.mp4) |
 | Sunday planning and Grow | [2-week.mp4](2-week.mp4) |
 | A new parent, from zero | [3-new-parent.mp4](3-new-parent.mp4) |
+| Pilot features | [4-pilot.mp4](4-pilot.mp4) |
 
 ## The core loop
 
@@ -161,4 +162,51 @@ A soccer tryout on Thursday.
 The first starter is about the tryout: “What are you hoping the coach notices?” Ready for the car ride home.
 
 <img src="screens/3-new-parent-05.png" alt="Tonight with Sam" width="300">
+
+
+## Pilot features
+
+_Pilot features_ · [video](4-pilot.mp4)
+
+### 1. If they answer
+
+Every starter now carries its second move: what to ask once the kid actually says something.
+
+<img src="screens/4-pilot-01.png" alt="If they answer" width="300">
+
+### 2. The second move
+
+After a talk that landed: one follow-up and a listening tip. “Wrong moment” is a new outcome that never counts against you.
+
+<img src="screens/4-pilot-02.png" alt="The second move" width="300">
+
+### 3. Import the week
+
+Paste the newsletter. Rooted finds the dated lines; you untick what you don’t want.
+
+<img src="screens/4-pilot-03.png" alt="Import the week" width="300">
+
+### 4. Approve, then they land
+
+Two found. Photos go through Claude on the real app; calendar links work anywhere.
+
+<img src="screens/4-pilot-04.png" alt="Approve, then they land" width="300">
+
+### 5. A reminder at pickup
+
+Family → Reminder. A push at your hour with the kid’s name and the event. Never the question.
+
+<img src="screens/4-pilot-05.png" alt="A reminder at pickup" width="300">
+
+### 6. The experiment, in the open
+
+Pilot mode alternates event questions with general ones. Grow shows the running tally: this is the pilot’s primary comparison.
+
+<img src="screens/4-pilot-06.png" alt="The experiment, in the open" width="300">
+
+### 7. Founding-family pilot
+
+A real offer, counted against everyone who sees it. Four weeks for $59.
+
+<img src="screens/4-pilot-07.png" alt="Founding-family pilot" width="300">
 

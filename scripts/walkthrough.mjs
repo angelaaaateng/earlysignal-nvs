@@ -198,6 +198,23 @@ await tour({
   ],
 });
 
+console.log('Recording the pilot features…');
+await tour({
+  slug: '4-pilot', role: 'Pilot features', layout: 'phone', accent: '#effad6', ua: IPHONE_UA,
+  steps: [
+    { title: 'If they answer', text: 'Every starter now carries its second move: what to ask once the kid actually says something.', do: async ({ r, tap, t }) => { await tap(r('button', { name: 'Try the demo' })); await t(/If they answer/).scrollIntoViewIfNeeded(); } },
+    { title: 'The second move', text: 'After a talk that landed: one follow-up and a listening tip. “Wrong moment” is a new outcome that never counts against you.',
+      do: async ({ r, tap, wait }) => { await tap(r('button', { name: 'I asked it' })); await wait(600); await tap(r('radio', { name: 'Good talk' })); } },
+    { title: 'Import the week', text: 'Paste the newsletter. Rooted finds the dated lines; you untick what you don’t want.',
+      do: async ({ r, tap, type, app, wait }) => { await tap(r('button', { name: 'Skip for now' })); await wait(600); await tap(r('tab', { name: 'Week' })); await wait(600); await tap(r('button', { name: 'Import' })); await wait(500); await type(app.getByLabel('Newsletter, syllabus or a few lines').filter({ visible: true }).first(), 'Spelling bee Nov 20\nPicture day 11/25'); await tap(r('button', { name: 'Find events' })); } },
+    { title: 'Approve, then they land', text: 'Two found. Photos go through Claude on the real app; calendar links work anywhere.', do: async ({ r, tap }) => tap(r('button', { name: /Add 2 to Ava/ })) },
+    { title: 'A reminder at pickup', text: 'Family → Reminder. A push at your hour with the kid’s name and the event. Never the question.',
+      do: async ({ r, tap, wait }) => { await tap(r('tab', { name: 'Family' })); await wait(600); await tap(r('switch', { name: 'Daily reminder' })); await wait(400); await tap(r('button', { name: 'Pickup · 3 pm' })); } },
+    { title: 'The experiment, in the open', text: 'Pilot mode alternates event questions with general ones. Grow shows the running tally: this is the pilot’s primary comparison.', do: async ({ r, tap }) => tap(r('tab', { name: 'Grow' })) },
+    { title: 'Founding-family pilot', text: 'A real offer, counted against everyone who sees it. Four weeks for $59.', do: async ({ r, tap }) => tap(r('link', { name: /Founding-family pilot/ })) },
+  ],
+});
+
 await browser.close();
 server.kill();
 
@@ -208,7 +225,7 @@ execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0'
 rmSync(TMP, { recursive: true, force: true });
 
 // README.md
-const title = { '1-parent': 'The core loop', '2-week': 'Sunday planning and Grow', '3-new-parent': 'A new parent, from zero' };
+const title = { '1-parent': 'The core loop', '2-week': 'Sunday planning and Grow', '3-new-parent': 'A new parent, from zero', '4-pilot': 'Pilot features' };
 let md = `# Rooted walkthrough\n\nRecorded from the production web build with demo data. Regenerate with \`npm run build:web && npm run walkthrough\`.\n\n`;
 md += `**Full video:** [0-full-walkthrough.mp4](0-full-walkthrough.mp4)\n\n| Point of view | Video |\n|---|---|\n`;
 for (const s of doc) md += `| ${title[s.slug]} | [${s.slug}.mp4](${s.slug}.mp4) |\n`;
