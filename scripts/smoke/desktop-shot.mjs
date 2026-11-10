@@ -9,7 +9,7 @@ await p.getByText(/^Good (morning|afternoon|evening)$/).waitFor();
 await p.waitForTimeout(600);
 await p.screenshot({ path: 'docs/walkthrough/screens/desktop-home.png' });
 await p.getByRole('tab', { name: 'Grow' }).click();
-await p.getByText('Sunday check-in').waitFor();
+await p.getByText('Sunday check-in').nth(1).waitFor();
 await p.waitForTimeout(400);
 await p.screenshot({ path: 'docs/walkthrough/screens/desktop-grow.png' });
 await b.close();
