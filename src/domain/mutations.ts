@@ -1,4 +1,4 @@
-import type { Db, EventKind, Kid, KidEvent, Moment, Outcome, Talk } from './types';
+import type { Arm, Db, EventKind, Impression, Kid, KidEvent, Moment, NudgeSettings, Outcome, Talk } from './types';
 import { weekStart } from './dates';
 
 /**
@@ -53,10 +53,33 @@ export function deleteEvent(db: Db, parentId: string, eventId: string): Db {
   return { ...db, events: db.events.filter((x) => x.id !== eventId) };
 }
 
-export function logTalk(db: Db, parentId: string, input: { kidId: string; eventId?: string; promptId: string; question: string; moment?: Moment; outcome: Outcome }, now: Date): { db: Db; talk: Talk } {
+export function logTalk(db: Db, parentId: string, input: { kidId: string; eventId?: string; promptId: string; question: string; moment?: Moment; outcome: Outcome; arm?: Arm; followUpUsed?: boolean }, now: Date): { db: Db; talk: Talk } {
   ownKid(db, parentId, input.kidId);
   const talk: Talk = { id: makeId('talk'), parentId, ...input, askedAt: now.toISOString() };
-  return { db: { ...db, talks: [...db.talks, talk] }, talk };
+  const today = now.toISOString().slice(0, 10);
+  const impressions = db.impressions.map((i) => (i.parentId === parentId && i.kidId === input.kidId && i.promptId === input.promptId && i.shownOn === today ? { ...i, asked: true } : i));
+  return { db: { ...db, talks: [...db.talks, talk], impressions }, talk };
+}
+
+/** Record that a starter was shown today (once per kid, prompt and day). */
+export function recordImpression(db: Db, parentId: string, input: { kidId: string; promptId: string; arm: Arm; eventId?: string; shownOn: string }): Db {
+  ownKid(db, parentId, input.kidId);
+  if (db.impressions.some((i) => i.parentId === parentId && i.kidId === input.kidId && i.promptId === input.promptId && i.shownOn === input.shownOn)) return db;
+  const imp: Impression = { id: makeId('imp'), parentId, ...input, asked: false };
+  return { ...db, impressions: [...db.impressions, imp] };
+}
+
+export function setNudge(db: Db, parentId: string, nudge: NudgeSettings): Db {
+  if (nudge.hour < 0 || nudge.hour > 23) throw new Error('INVALID: Pick an hour.');
+  return { ...db, parents: db.parents.map((p) => (p.id === parentId ? { ...p, nudge } : p)) };
+}
+
+export function setPilotMode(db: Db, parentId: string, on: boolean): Db {
+  return { ...db, parents: db.parents.map((p) => (p.id === parentId ? { ...p, pilotMode: on } : p)) };
+}
+
+export function registerPilotInterest(db: Db, parentId: string): Db {
+  return db.pilotInterest.includes(parentId) ? db : { ...db, pilotInterest: [...db.pilotInterest, parentId] };
 }
 
 export function markWeekReviewed(db: Db, parentId: string, today: string, now: Date): Db {

@@ -11,7 +11,7 @@ import { log } from '../observability/logger';
  * token and the parent's own notes (src/data/notes.ts), nothing else.
  */
 const KEY = 'rooted.state';
-const SCHEMA = 2;
+const SCHEMA = 3;
 
 interface Saved {
   schema: number;

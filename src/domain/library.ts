@@ -96,3 +96,17 @@ export const TOPIC_LABEL: Record<Topic, string> = {
 export function fill(question: string, kidName: string, title?: string) {
   return question.replace(/\{name\}/g, kidName).replace(/\{title\}/g, title ?? 'it');
 }
+
+/**
+ * The second move: what to do once the kid actually answers. One follow-up that
+ * stays with their answer, and one listening tip (from the evidence brief: interest
+ * and validation predict the next disclosure). Never advice, never a lecture.
+ */
+export const SECOND_MOVE: Record<Topic, { followUp: string; listen: string }> = {
+  school: { followUp: 'What was that part like for you?', listen: 'Repeat their last three words back, then wait. Don’t fix anything yet.' },
+  friends: { followUp: 'What did they do that made it fun?', listen: 'Ask for the story, not the lesson. If they trail off, let the silence sit.' },
+  feelings: { followUp: 'What would have made it a little easier?', listen: 'Name the feeling you heard (“sounds frustrating”) and stop there.' },
+  interests: { followUp: 'Can you show me one thing from it?', listen: 'Be genuinely curious. Let them be the expert for two minutes.' },
+  'looking-ahead': { followUp: 'What’s the first small step toward that?', listen: 'Don’t add your own hopes. Theirs are the point.' },
+  family: { followUp: 'What would that look like next week?', listen: 'Take it seriously out loud, even if the answer is “pizza every night”.' },
+};

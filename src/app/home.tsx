@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
 import { partOfDay, relativeDay, toDateKey, weekdayShort } from '@/domain/dates';
-import { TOPIC_LABEL } from '@/domain/library';
+import { SECOND_MOVE, TOPIC_LABEL } from '@/domain/library';
 import { monthCount, topTopic, weekView } from '@/domain/stats';
-import { tonight } from '@/domain/suggest';
+import { armFor, nearestEvent, tonight } from '@/domain/suggest';
 import { EVENT_KIND_LABEL, MOMENT_LABEL, type Moment } from '@/domain/types';
 import { Button, Chip, KidChip, LoadError, Loading, PromptCard, StatTile, WeekRow } from '@/ui/Kit';
 import { Screen } from '@/ui/Screen';
@@ -14,12 +14,24 @@ import { useHome } from '@/ui/useHome';
 
 /** Home: tonight's starter for the selected kid. */
 export default function Home() {
-  const { now, backend } = useApp();
+  const { now, backend, session } = useApp();
   const h = useHome();
+  const recorded = useRef<string>('');
   const [variant, setVariant] = useState(0);
   const [moment, setMoment] = useState<Moment | undefined>();
   const today = toDateKey(now);
   const part = partOfDay(now);
+
+  const kid0 = h.kid;
+  const arm0 = kid0 ? armFor(h.me.id, today, h.me.pilotMode, !!nearestEvent(h.events, kid0.id, today)) : 'generic';
+  const s0 = kid0 ? tonight(kid0, h.events, h.talks, today, variant, arm0) : undefined;
+  // The experiment's denominator: record that this starter was shown today (once per kid, prompt and day).
+  const impressionKey = kid0 && s0 ? `${kid0.id}:${s0.promptId}:${today}` : '';
+  useEffect(() => {
+    if (!impressionKey || recorded.current === impressionKey || !session || !kid0 || !s0) return;
+    recorded.current = impressionKey;
+    void backend.recordImpression(session, { kidId: kid0.id, promptId: s0.promptId, arm: s0.arm, eventId: s0.eventId, shownOn: today }).catch(() => undefined);
+  }, [impressionKey, backend, session, kid0, s0, today]);
 
   if (!h.data) return <Screen tabs="Home">{h.error ? <LoadError error={h.error} retry={h.reload} /> : <Loading />}</Screen>;
 
@@ -43,13 +55,13 @@ export default function Home() {
     );
   }
 
-  const kid = h.kid!;
-  const s = tonight(kid, h.events, h.talks, today, variant);
+  const kid = kid0!;
+  const s = s0!;
   const week = weekView(h.talks, today);
   const upcoming = h.events.filter((e) => e.kidId === kid.id && e.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
   const top = topTopic(h.talks, kid);
   const askedToday = h.talks.some((t) => t.kidId === kid.id && t.askedAt.slice(0, 10) === today && t.outcome !== 'not_tonight');
-  const logHref = { pathname: '/log' as const, params: { kid: kid.id, prompt: s.promptId, question: s.question, context: s.context, ...(s.eventId ? { event: s.eventId } : {}), ...(moment ? { moment } : {}) } };
+  const logHref = { pathname: '/log' as const, params: { kid: kid.id, prompt: s.promptId, question: s.question, context: s.context, arm: s.arm, ...(s.eventId ? { event: s.eventId } : {}), ...(moment ? { moment } : {}) } };
 
   const aside = (
     <>
@@ -125,6 +137,7 @@ export default function Home() {
         <Text style={[T.caption, { color: '#bfd9c9' }]}>
           {s.context} · {TOPIC_LABEL[s.topic]}
         </Text>
+        <Text style={[T.bodySm, { color: '#bfd9c9' }]}>If they answer: “{SECOND_MOVE[s.topic].followUp}”</Text>
       </PromptCard>
 
       <View style={{ gap: S[3] }}>

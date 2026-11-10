@@ -1,5 +1,7 @@
-import { addEvent, addKid, deleteEvent, deleteKid, logTalk, markWeekReviewed, updateKid } from '@/domain/mutations';
-import type { Db, EventKind, Kid, Moment, Outcome } from '@/domain/types';
+import { parseIcs, parseText, type EventCandidate } from '@/domain/importEvents';
+import { addEvent, addKid, deleteEvent, deleteKid, logTalk, markWeekReviewed, recordImpression, registerPilotInterest, setNudge, setPilotMode, updateKid } from '@/domain/mutations';
+import type { Arm, Db, EventKind, Kid, Moment, NudgeSettings, Outcome } from '@/domain/types';
+import type { ExtractInput } from './backend';
 import { log } from '@/observability/logger';
 import type { Backend, HomeData, Session, SignInResult } from './backend';
 import { toBackendError } from './backend';
@@ -25,7 +27,8 @@ export class MockBackend implements Backend {
     this.listeners.forEach((f) => f());
   }
   private session(uid: string): Session {
-    return { user: this.db.parents.find((p) => p.id === uid)! };
+    const p = this.db.parents.find((x) => x.id === uid)!;
+    return { user: { ...p, nudge: p.nudge ?? { enabled: false, hour: 17, tz: 'America/New_York' }, pilotMode: p.pilotMode ?? true } };
   }
   private run(fn: (db: Db, now: Date) => Db) {
     try {
@@ -76,6 +79,8 @@ export class MockBackend implements Backend {
       events: this.db.events.filter((e) => this.db.kids.some((k) => k.id === e.kidId && k.parentId !== id)),
       talks: this.db.talks.filter((t) => t.parentId !== id),
       weekReviews: this.db.weekReviews.filter((w) => w.parentId !== id),
+      impressions: this.db.impressions.filter((i) => i.parentId !== id),
+      pilotInterest: this.db.pilotInterest.filter((p) => p !== id),
     });
   }
 
@@ -87,7 +92,60 @@ export class MockBackend implements Backend {
       events: this.db.events.filter((e) => kidIds.has(e.kidId)),
       talks: this.db.talks.filter((t) => t.parentId === s.user.id),
       weekReviews: this.db.weekReviews.filter((w) => w.parentId === s.user.id),
+      impressions: this.db.impressions.filter((i) => i.parentId === s.user.id),
+      pilotInterested: this.db.pilotInterest.includes(s.user.id),
+      pushSubscribed: this.pushEndpoints.size > 0,
     };
+  }
+  private pushEndpoints = new Set<string>();
+  async requestPasswordReset() {
+    return { ok: false, message: 'The demo has no email. On the real app this sends a reset link.' };
+  }
+  async updatePassword() {
+    return { ok: true };
+  }
+  async addEvents(s: Session, inputs: { kidId: string; title: string; kind: EventKind; date: string }[]) {
+    let n = 0;
+    this.run((db, now) => {
+      let next = db;
+      for (const i of inputs) {
+        next = addEvent(next, s.user.id, i, now).db;
+        n++;
+      }
+      return next;
+    });
+    return n;
+  }
+  async recordImpression(s: Session, input: { kidId: string; promptId: string; arm: Arm; eventId?: string; shownOn: string }) {
+    const next = recordImpression(this.db, s.user.id, input);
+    if (next !== this.db) {
+      this.db = next;
+      void saveState(next, this.userId);
+    }
+  }
+  async setNudge(s: Session, nudge: NudgeSettings) {
+    this.run((db) => setNudge(db, s.user.id, nudge));
+  }
+  async setPilotMode(s: Session, on: boolean) {
+    this.run((db) => setPilotMode(db, s.user.id, on));
+  }
+  async savePushSubscription(_s: Session, sub: { endpoint: string }) {
+    this.pushEndpoints.add(sub.endpoint);
+  }
+  async removePushSubscription(_s: Session, endpoint: string) {
+    this.pushEndpoints.delete(endpoint);
+  }
+  async registerPilotInterest(s: Session) {
+    this.run((db) => registerPilotInterest(db, s.user.id));
+  }
+  async extractEvents(_s: Session, input: ExtractInput, today: string): Promise<EventCandidate[]> {
+    if (input.kind === 'text') return parseText(input.text, today);
+    if (input.kind === 'calendar') {
+      const r = await fetch(input.url);
+      if (!r.ok) throw toBackendError(new Error('INVALID: That link didn’t return a calendar.'));
+      return parseIcs(await r.text(), today);
+    }
+    throw toBackendError(new Error('INVALID: Reading a photo needs the real app (it uses Claude). Paste the text instead.'));
   }
   async addKid(s: Session, input: { name: string; grade: number; interests: string[]; activities: string[] }) {
     let id = '';
@@ -116,7 +174,7 @@ export class MockBackend implements Backend {
   async deleteEvent(s: Session, eventId: string) {
     this.run((db) => deleteEvent(db, s.user.id, eventId));
   }
-  async logTalk(s: Session, input: { kidId: string; eventId?: string; promptId: string; question: string; moment?: Moment; outcome: Outcome }) {
+  async logTalk(s: Session, input: { kidId: string; eventId?: string; promptId: string; question: string; moment?: Moment; outcome: Outcome; arm?: Arm; followUpUsed?: boolean }) {
     let id = '';
     this.run((db, now) => {
       const r = logTalk(db, s.user.id, input, now);

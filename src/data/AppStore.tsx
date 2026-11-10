@@ -99,6 +99,11 @@ export function AppProvider({ children, backend: given }: { children: ReactNode;
       try {
         await fn(backend, s);
         log.audit(event, { ...data, ok: true, ms: Date.now() - t0 });
+        // Settings live on the parent row: refresh the session so screens see them.
+        if (event === 'nudge.set' || event === 'pilot.mode') {
+          const fresh = await backend.restoreSession();
+          if (fresh) apply(fresh);
+        }
         setVersion((v) => v + 1);
       } catch (e) {
         const err = toBackendError(e);
@@ -107,7 +112,7 @@ export function AppProvider({ children, backend: given }: { children: ReactNode;
         throw err;
       }
     },
-    [backend],
+    [backend, apply],
   );
 
   const resetDemo = useCallback(async () => {

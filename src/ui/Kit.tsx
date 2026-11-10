@@ -121,8 +121,9 @@ export function WeekRow({ title, note, days }: { title: string; note?: string; d
   );
 }
 
-const OUTCOMES: { key: 'not_tonight' | 'few_words' | 'good_talk' | 'really_talked'; label: string; seed: number }[] = [
+const OUTCOMES: { key: 'not_tonight' | 'wrong_moment' | 'few_words' | 'good_talk' | 'really_talked'; label: string; seed: number }[] = [
   { key: 'not_tonight', label: 'Not tonight', seed: 6 },
+  { key: 'wrong_moment', label: 'Wrong moment', seed: 8 },
   { key: 'few_words', label: 'A few words', seed: 10 },
   { key: 'good_talk', label: 'Good talk', seed: 14 },
   { key: 'really_talked', label: 'We really talked', seed: 18 },
@@ -139,7 +140,7 @@ export function CheckIn({ value, onChange, question = 'How did it go?' }: { valu
           return (
             <Pressable key={o.key} accessibilityRole="radio" accessibilityState={{ checked: on }} aria-checked={on} accessibilityLabel={o.label} onPress={() => onChange(o.key)} style={[styles.pod, { backgroundColor: on ? C.moss : C.oat }]}>
               <View style={{ width: o.seed, height: o.seed, borderRadius: R.pill, backgroundColor: on ? C.onMoss : C.moss }} />
-              <Text style={[T.caption, { color: on ? C.onMoss : C.soil, textAlign: 'center' }]}>{o.label}</Text>
+              <Text style={[T.caption, { fontSize: 12, lineHeight: 15, color: on ? C.onMoss : C.soil, textAlign: 'center' }]}>{o.label}</Text>
             </Pressable>
           );
         })}
@@ -221,6 +222,6 @@ const styles = StyleSheet.create({
   stat: { flex: 1, minWidth: 140, backgroundColor: C.bubble, borderRadius: R.md, padding: S[4], gap: 6, ...shadowSoft },
   bubble: { backgroundColor: C.bubble, borderRadius: R.lg, padding: S[5], gap: S[2] },
   day: { flex: 1, aspectRatio: 1, borderRadius: R.sm, alignItems: 'center', justifyContent: 'center' },
-  pod: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 8, paddingVertical: 12, paddingHorizontal: 4, borderRadius: R.md, minHeight: 84 },
+  pod: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 8, paddingVertical: 12, paddingHorizontal: 2, borderRadius: R.md, minHeight: 84 },
   field: { backgroundColor: C.paperSunk, borderRadius: R.md, paddingVertical: 13, paddingHorizontal: 16, minHeight: 48 },
 });

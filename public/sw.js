@@ -78,3 +78,36 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+// ---- Web push: the smart-timing nudge. Payload is {title, body, url}; never the question itself.
+self.addEventListener('push', (event) => {
+  let data = { title: 'Rooted', body: 'One question for tonight.', url: `${BASE}/home` };
+  try {
+    data = { ...data, ...event.data.json() };
+  } catch {}
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: `${BASE}/icons/icon-192.png`,
+      badge: `${BASE}/icons/icon-192.png`,
+      tag: 'rooted-nudge',
+      renotify: false,
+      data: { url: data.url.startsWith('http') ? data.url : `${BASE}${data.url.startsWith('/') ? data.url : `/${data.url}`}` },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? `${BASE}/home`;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => 'focus' in c);
+      if (open) {
+        open.navigate(url);
+        return open.focus();
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
+});

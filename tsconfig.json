@@ -14,5 +14,10 @@
   "include": [
     "**/*.ts",
     "**/*.tsx"
+  ],
+  "exclude": [
+    "supabase/functions",
+    "dist",
+    "dist-native"
   ]
 }

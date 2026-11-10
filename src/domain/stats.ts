@@ -1,6 +1,6 @@
 import { addDays, daysBetween, weekStart } from './dates';
 import { TOPIC_LABEL, promptById } from './library';
-import type { DateKey, Kid, Talk } from './types';
+import { COUNTS_AS_TALK, type DateKey, type Kid, type Talk } from './types';
 
 /**
  * Counts for the parent's own effort. Never a score on the relationship, never
@@ -19,7 +19,7 @@ const LETTER = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const NAME = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export function weekView(talks: Talk[], today: DateKey, start = weekStart(today)): WeekView {
-  const counted = talks.filter((t) => t.outcome !== 'not_tonight');
+  const counted = talks.filter((t) => COUNTS_AS_TALK[t.outcome]);
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(start, i);
     const count = counted.filter((t) => t.askedAt.slice(0, 10) === date).length;
@@ -32,7 +32,7 @@ export function weekView(talks: Talk[], today: DateKey, start = weekStart(today)
 
 export function monthCount(talks: Talk[], today: DateKey) {
   const ym = today.slice(0, 7);
-  return talks.filter((t) => t.outcome !== 'not_tonight' && t.askedAt.startsWith(ym)).length;
+  return talks.filter((t) => COUNTS_AS_TALK[t.outcome] && t.askedAt.startsWith(ym)).length;
 }
 
 /** The topic this kid responded to best, by good talks. */
@@ -54,7 +54,7 @@ export function weeksWithATalk(talks: Talk[], today: DateKey, weeks = 4) {
   let n = 0;
   for (let w = 0; w < weeks; w++) {
     const ws = addDays(start, -7 * w);
-    if (talks.some((t) => t.outcome !== 'not_tonight' && daysBetween(ws, t.askedAt.slice(0, 10)) >= 0 && daysBetween(ws, t.askedAt.slice(0, 10)) < 7)) n++;
+    if (talks.some((t) => COUNTS_AS_TALK[t.outcome] && daysBetween(ws, t.askedAt.slice(0, 10)) >= 0 && daysBetween(ws, t.askedAt.slice(0, 10)) < 7)) n++;
   }
   return { n, of: weeks };
 }

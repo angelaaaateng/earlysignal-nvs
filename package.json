@@ -13,6 +13,7 @@
     "expo-clipboard": "~58.0.4",
     "expo-constants": "~58.0.15",
     "expo-font": "~58.0.11",
+    "expo-image-picker": "~58.0.10",
     "expo-linking": "~58.0.16",
     "expo-router": "~58.0.30",
     "expo-sqlite": "~58.0.15",
@@ -36,7 +37,8 @@
     "jest-expo": "~58.0.14",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "web-push": "^3.6.7"
   },
   "scripts": {
     "start": "expo start",

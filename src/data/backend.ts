@@ -4,7 +4,8 @@
  *   - SupabaseBackend: the real thing.
  * Screens never import either directly; they go through AppStore.
  */
-import type { Db, EventKind, Kid, KidEvent, Moment, Outcome, Parent, Talk, WeekReview } from '@/domain/types';
+import type { EventCandidate } from '@/domain/importEvents';
+import type { Arm, Db, EventKind, Impression, Kid, KidEvent, Moment, NudgeSettings, Outcome, Parent, Talk, WeekReview } from '@/domain/types';
 
 export interface Session {
   user: Parent;
@@ -18,7 +19,12 @@ export interface HomeData {
   events: KidEvent[];
   talks: Talk[];
   weekReviews: WeekReview[];
+  impressions: Impression[];
+  pilotInterested: boolean;
+  pushSubscribed: boolean;
 }
+
+export type ExtractInput = { kind: 'text'; text: string } | { kind: 'photo'; base64: string; mediaType: string } | { kind: 'calendar'; url: string };
 
 export interface Backend {
   readonly kind: 'mock' | 'supabase';
@@ -30,6 +36,9 @@ export interface Backend {
   signInDemo?(): Promise<SignInResult>;
   signOut(): Promise<void>;
   deleteMyAccount(session: Session): Promise<void>;
+  /** Sends the recovery email (real backend only). */
+  requestPasswordReset(email: string): Promise<{ ok: boolean; message?: string }>;
+  updatePassword(newPassword: string): Promise<{ ok: boolean; message?: string }>;
 
   home(session: Session, now: Date): Promise<HomeData>;
   addKid(session: Session, input: { name: string; grade: number; interests: string[]; activities: string[] }): Promise<string>;
@@ -37,8 +46,18 @@ export interface Backend {
   deleteKid(session: Session, kidId: string): Promise<void>;
   addEvent(session: Session, input: { kidId: string; title: string; kind: EventKind; date: string }): Promise<string>;
   deleteEvent(session: Session, eventId: string): Promise<void>;
-  logTalk(session: Session, input: { kidId: string; eventId?: string; promptId: string; question: string; moment?: Moment; outcome: Outcome }): Promise<string>;
+  addEvents(session: Session, inputs: { kidId: string; title: string; kind: EventKind; date: string }[]): Promise<number>;
+  logTalk(session: Session, input: { kidId: string; eventId?: string; promptId: string; question: string; moment?: Moment; outcome: Outcome; arm?: Arm; followUpUsed?: boolean }): Promise<string>;
   markWeekReviewed(session: Session, today: string): Promise<void>;
+  /** The experiment: a starter was shown today. Idempotent per kid, prompt and day. */
+  recordImpression(session: Session, input: { kidId: string; promptId: string; arm: Arm; eventId?: string; shownOn: string }): Promise<void>;
+  setNudge(session: Session, nudge: NudgeSettings): Promise<void>;
+  setPilotMode(session: Session, on: boolean): Promise<void>;
+  savePushSubscription(session: Session, sub: { endpoint: string; p256dh: string; auth: string; userAgent?: string }): Promise<void>;
+  removePushSubscription(session: Session, endpoint: string): Promise<void>;
+  registerPilotInterest(session: Session, note?: string): Promise<void>;
+  /** Turn pasted text, a photo or a calendar link into event candidates for approval. */
+  extractEvents(session: Session, input: ExtractInput, today: string): Promise<EventCandidate[]>;
 
   /** Mock only. */
   resetDemo?(): Promise<void>;

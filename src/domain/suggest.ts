@@ -1,6 +1,6 @@
 import { daysBetween, relativeDay } from './dates';
 import { EVENT_PROMPTS, fill, GENERIC_PROMPTS, type Phase, type Prompt } from './library';
-import type { DateKey, Kid, KidEvent, Talk } from './types';
+import type { Arm, DateKey, Kid, KidEvent, Talk } from './types';
 
 /**
  * Picks questions from the reviewed library for one kid. Deterministic given
@@ -77,9 +77,24 @@ export function nearestEvent(events: KidEvent[], kidId: string, today: DateKey):
     .sort((a, b) => Math.abs(daysBetween(today, a.date)) - Math.abs(daysBetween(today, b.date)) || a.date.localeCompare(b.date))[0];
 }
 
-/** Tonight's starter for one kid. */
-export function tonight(kid: Kid, events: KidEvent[], talks: Talk[], today: DateKey, variant = 0): Suggestion {
+/**
+ * The pilot experiment (evidence brief §83): within each family, alternate
+ * event-specific and generic starters across days. Deterministic from the parent
+ * and the date, so both arms get comparable moments and nobody can game it.
+ */
+export function armFor(parentId: string, today: DateKey, pilotMode: boolean | undefined, hasEvent: boolean): Arm {
+  if (!hasEvent) return 'generic';
+  if (!pilotMode) return 'event';
+  let h = 0;
+  for (const c of `${parentId}:${today}`) h = (h * 33 + c.charCodeAt(0)) >>> 0;
+  return h % 2 === 0 ? 'event' : 'generic';
+}
+
+/** Tonight's starter for one kid, in the arm the experiment assigns (or event-first when pilot mode is off). */
+export function tonight(kid: Kid, events: KidEvent[], talks: Talk[], today: DateKey, variant = 0, arm?: Arm): Suggestion & { arm: Arm } {
   const ev = nearestEvent(events, kid.id, today);
-  const list = ev ? suggestForEvent(kid, ev, talks, today, 1, variant) : [];
-  return list[0] ?? suggestGeneric(kid, talks, today, 1, variant)[0];
+  const chosen = arm ?? (ev ? 'event' : 'generic');
+  const list = ev && chosen === 'event' ? suggestForEvent(kid, ev, talks, today, 1, variant) : [];
+  const s = list[0] ?? suggestGeneric(kid, talks, today, 1, variant)[0];
+  return { ...s, arm: s.eventId ? 'event' : 'generic' };
 }

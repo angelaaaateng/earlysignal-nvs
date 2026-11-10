@@ -6,7 +6,7 @@ import { Button, ErrorLine, TextField } from '@/ui/Kit';
 import { Screen, useLayout } from '@/ui/Screen';
 import { C, R, S, T } from '@/ui/theme';
 
-type Mode = 'pick' | 'signin' | 'signup';
+type Mode = 'pick' | 'signin' | 'signup' | 'forgot';
 
 /** Sign in. Parents only: email + password. Kids never have an account. */
 export default function SignIn() {
@@ -18,6 +18,7 @@ export default function SignIn() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [sent, setSent] = useState(false);
 
   const go = async (fn: () => Promise<{ ok: boolean; message?: string }>) => {
     setBusy(true);
@@ -60,7 +61,27 @@ export default function SignIn() {
         </View>
       )}
 
-      {mode !== 'pick' && (
+      {mode === 'forgot' && (
+        <View style={{ gap: S[4] }}>
+          <Text accessibilityRole="header" style={T.title}>
+            Reset your password
+          </Text>
+          {sent ? (
+            <Text style={T.body}>If that email has an account, a reset link is on its way. It opens Rooted and asks for a new password.</Text>
+          ) : (
+            <>
+              <TextField label="Email" value={email} onChange={setEmail} placeholder="you@example.com" keyboardType="email-address" textContentType="emailAddress" autoFocus />
+              <ErrorLine>{error}</ErrorLine>
+              <Button label="Send reset link" size="lg" busy={busy} disabled={!validEmail} onPress={() => void go(async () => { const r = await backend.requestPasswordReset(email); if (r.ok) setSent(true); return r; })} />
+            </>
+          )}
+          <Pressable accessibilityRole="button" onPress={() => switchTo('signin')} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={[T.label, { color: C.soilMuted }]}>Back to sign in</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {(mode === 'signin' || mode === 'signup') && (
         <View style={{ gap: S[4] }}>
           <Text accessibilityRole="header" style={T.title}>
             {mode === 'signup' ? 'Create your account' : 'Welcome back'}
@@ -79,6 +100,11 @@ export default function SignIn() {
           <Pressable accessibilityRole="button" onPress={() => switchTo(mode === 'signup' ? 'signin' : 'signup')} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
             <Text style={[T.label, { color: C.moss }]}>{mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account'}</Text>
           </Pressable>
+          {mode === 'signin' && (
+            <Pressable accessibilityRole="button" onPress={() => switchTo('forgot')} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={[T.label, { color: C.soilMuted }]}>Forgot your password?</Text>
+            </Pressable>
+          )}
           <Pressable accessibilityRole="button" onPress={() => switchTo('pick')} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
             <Text style={[T.label, { color: C.soilMuted }]}>Back</Text>
           </Pressable>

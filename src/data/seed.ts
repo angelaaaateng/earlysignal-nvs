@@ -22,7 +22,7 @@ export function buildSeed(now: Date): Db {
   });
 
   return {
-    parents: [{ id: IDS.parent, displayName: 'Maya Chen', createdAt: iso(-40) }],
+    parents: [{ id: IDS.parent, displayName: 'Maya Chen', createdAt: iso(-40), nudge: { enabled: false, hour: 17, tz: 'America/New_York' }, pilotMode: true }],
     kids: [
       { id: IDS.ava, parentId: IDS.parent, name: 'Ava', grade: 6, interests: ['Soccer', 'Art', 'Animals'], activities: ['Soccer practice', 'Band'], createdAt: iso(-40) },
       { id: IDS.leo, parentId: IDS.parent, name: 'Leo', grade: 8, interests: ['Robotics', 'Gaming', 'Music'], activities: ['Robotics team'], createdAt: iso(-40) },
@@ -48,5 +48,7 @@ export function buildSeed(now: Date): Db {
       ...(dow >= 1 ? [talk('t10', IDS.ava, 'g-friends-1', 'Who made you laugh today?', 'good_talk', -dow)] : []),
     ],
     weekReviews: [{ parentId: IDS.parent, weekStart: addDays(monday, -7), reviewedAt: iso(-7) }, { parentId: IDS.parent, weekStart: monday, reviewedAt: iso(-dow - 1) }],
+    impressions: [],
+    pilotInterest: [],
   };
 }

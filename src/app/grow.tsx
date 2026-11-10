@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
 import { allNotes } from '@/data/notes';
 import { addDays, rangeLabel, relativeDay, toDateKey, weekStart } from '@/domain/dates';
@@ -37,6 +37,20 @@ export default function Grow() {
 
   const aside = (
     <>
+      <Pressable accessibilityRole="link" onPress={() => router.push('/pilot')} style={{ backgroundColor: C.sparkTint, borderRadius: R.lg, padding: S[5], gap: 6 }}>
+        <Text style={T.overline}>Founding-family pilot</Text>
+        <Text style={T.subhead}>{h.data?.pilotInterested ? 'You’re on the list for the four-week pilot.' : 'Four weeks of reviewed questions for $59. Help us learn if this earns a place in your week.'}</Text>
+        <Text style={[T.label, { color: C.moss }]}>{h.data?.pilotInterested ? 'See what’s included' : 'Tell me more'}</Text>
+      </Pressable>
+      {h.me.pilotMode && (
+        <View style={{ backgroundColor: C.bubble, borderRadius: R.lg, padding: S[5], gap: 6 }}>
+          <Text style={T.overline}>The experiment</Text>
+          <Text style={T.subhead}>
+            {(() => { const a = h.talks.filter((t) => t.arm === 'event').length; const g = h.talks.filter((t) => t.arm === 'generic').length; const ia = h.data!.impressions.filter((i) => i.arm === 'event').length; const ig = h.data!.impressions.filter((i) => i.arm === 'generic').length; return `Event questions asked ${a} of ${ia} shown · generic ${g} of ${ig}`; })()}
+          </Text>
+          <Text style={T.bodySm}>Some days the starter is about the week, some days it’s general. We’re testing whether entering the schedule earns its keep. Turn this off in Family.</Text>
+        </View>
+      )}
       {worked.length > 0 && (
         <View style={{ gap: S[3] }}>
           <Text accessibilityRole="header" style={T.heading}>

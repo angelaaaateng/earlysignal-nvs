@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useApp } from '@/data/AppStore';
 import { addDays, monthDay, toDateKey, weekdayShort } from '@/domain/dates';
 import { EVENT_KIND_LABEL, type EventKind } from '@/domain/types';
@@ -22,6 +22,7 @@ export default function EventForm() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [added, setAdded] = useState(0);
+  const [repeat, setRepeat] = useState(false);
   const kid = h.kids.find((k) => k.id === kidId) ?? h.kids[0];
   const days = Array.from({ length: 21 }, (_, i) => addDays(p.date && p.date > today ? p.date : today, i));
 
@@ -30,7 +31,8 @@ export default function EventForm() {
     setBusy(true);
     setErr('');
     try {
-      await act('event.add', (b, s) => b.addEvent(s, { kidId: kid.id, title, kind, date }), { kind });
+      if (repeat) await act('event.add_repeating', (b, s) => b.addEvents(s, Array.from({ length: 8 }, (_, w) => ({ kidId: kid.id, title, kind, date: addDays(date, 7 * w) }))), { kind, weeks: 8 });
+      else await act('event.add', (b, s) => b.addEvent(s, { kidId: kid.id, title, kind, date }), { kind });
       if (andAnother) {
         setTitle('');
         setAdded((n) => n + 1);
@@ -79,6 +81,16 @@ export default function EventForm() {
           })}
         </ScrollView>
       </View>
+      <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: repeat }} aria-checked={repeat} onPress={() => setRepeat(!repeat)} style={{ flexDirection: 'row', alignItems: 'center', gap: S[3], minHeight: 44 }}>
+        <View style={{ width: 26, height: 26, borderRadius: 8, backgroundColor: repeat ? C.moss : C.oat, alignItems: 'center', justifyContent: 'center' }}>{repeat && <Text style={[T.label, { color: C.onMoss }]}>✓</Text>}</View>
+        <View style={{ flex: 1 }}>
+          <Text style={T.label}>Repeats weekly</Text>
+          <Text style={T.caption}>Soccer practice every Tuesday: adds the next 8 weeks.</Text>
+        </View>
+      </Pressable>
+      <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: '/import', params: kid ? { kid: kid.id } : {} })} style={{ minHeight: 44, justifyContent: 'center' }}>
+        <Text style={[T.label, { color: C.moss }]}>Or import the whole week: paste text, a photo or a calendar link →</Text>
+      </Pressable>
       {added > 0 && (
         <View style={{ backgroundColor: C.sprout, borderRadius: R.md, padding: S[3] }}>
           <Text style={[T.bodySm, { color: C.soil }]}>

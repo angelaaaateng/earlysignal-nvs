@@ -45,7 +45,10 @@ export default function Week() {
             The week
           </Text>
         </View>
-        <Button label="Add" icon="plus" size="sm" onPress={() => router.push({ pathname: '/event', params: h.kid ? { kid: h.kid.id } : {} })} />
+        <View style={{ flexDirection: 'row', gap: S[2] }}>
+          <Button label="Import" variant="soft" size="sm" onPress={() => router.push({ pathname: '/import', params: h.kid ? { kid: h.kid.id } : {} })} />
+          <Button label="Add" icon="plus" size="sm" onPress={() => router.push({ pathname: '/event', params: h.kid ? { kid: h.kid.id } : {} })} />
+        </View>
       </View>
 
       {events.length === 0 && (

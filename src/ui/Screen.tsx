@@ -9,13 +9,15 @@ import { C, R, S, shadowLift, shadowSoft, T } from './theme';
 /** Phones get a single column and a floating tab bar; a wide browser gets a sidebar and two columns. */
 export function useLayout() {
   const { width } = useWindowDimensions();
-  const wide = Platform.OS === 'web' && width >= 960;
-  return { wide, width };
+  const wide = Platform.OS === 'web' && width >= 900;
+  /** Room for a side column next to the main one. Below this the aside stacks underneath. */
+  const twoColumn = wide && width >= 1180;
+  return { wide, twoColumn, width };
 }
 
 export function Screen({ children, tabs, aside, contentStyle, scroll = true, bg = C.paper, narrow }: { children: ReactNode; tabs?: TabKey; aside?: ReactNode; contentStyle?: ViewStyle; scroll?: boolean; bg?: string; narrow?: boolean }) {
   const insets = useSafeAreaInsets();
-  const { wide } = useLayout();
+  const { wide, twoColumn } = useLayout();
   const { user } = useApp();
 
   if (wide) {
@@ -24,9 +26,9 @@ export function Screen({ children, tabs, aside, contentStyle, scroll = true, bg 
       <View style={[styles.outer, { backgroundColor: bg, flexDirection: 'row', alignItems: 'stretch' }]}>
         {showSidebar && <Sidebar active={tabs} />}
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
-          <View style={[styles.wideBody, narrow && !aside && { maxWidth: 680 }]}>
-            <View style={[styles.wideMain, narrow && { maxWidth: 560 }, { gap: (contentStyle as { gap?: number })?.gap ?? S[4] }]}>{children}</View>
-            {aside && <View style={[styles.wideAside, { gap: (contentStyle as { gap?: number })?.gap ?? S[4] }]}>{aside}</View>}
+          <View style={[styles.wideBody, (narrow && !aside) || !twoColumn ? { maxWidth: 720, flexDirection: 'column' } : null]}>
+            <View style={[styles.wideMain, !twoColumn && { maxWidth: 720, minWidth: 0, alignSelf: 'stretch' }, narrow && twoColumn && { maxWidth: 560 }, { gap: (contentStyle as { gap?: number })?.gap ?? S[4] }]}>{children}</View>
+            {aside && <View style={[twoColumn ? styles.wideAside : { alignSelf: 'stretch' }, { gap: (contentStyle as { gap?: number })?.gap ?? S[4] }]}>{aside}</View>}
           </View>
         </ScrollView>
       </View>

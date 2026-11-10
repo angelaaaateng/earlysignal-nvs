@@ -37,7 +37,7 @@ function Routes() {
   }, [hydrated]);
   // Signed in on the sign-in screen → home. Signed-in routes are guarded below, so a signed-out deep link lands on sign-in.
   useEffect(() => {
-    if (hydrated && user && pathname === '/') router.replace('/home');
+    if (hydrated && user && pathname === '/' && !/type=recovery/.test(typeof window !== 'undefined' ? window.location.hash + window.location.search : '')) router.replace('/home');
   }, [hydrated, user, pathname]);
   if (!hydrated) return <View style={{ flex: 1, backgroundColor: C.paper }} />;
   return (
@@ -51,6 +51,9 @@ function Routes() {
         <Stack.Screen name="log" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="kid" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="event" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="import" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="pilot" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="reset-password" />
       </Stack.Protected>
       <Stack.Screen name="diagnostics" />
     </Stack>
