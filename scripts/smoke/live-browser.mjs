@@ -1,0 +1,26 @@
+// Drives the deployed app in a headless iPhone as the shared tester. Usage: node scripts/smoke/live-browser.mjs
+import { chromium, devices } from '@playwright/test';
+const b = await chromium.launch();
+const ctx = await b.newContext({ ...devices['iPhone 14'], deviceScaleFactor: 2 });
+const p = await ctx.newPage();
+const out = {};
+await p.goto('https://earlysignal-nvs.vercel.app/', { waitUntil: 'networkidle' });
+out.landing = await p.getByText('Small talks. Deep roots.').isVisible();
+await p.getByRole('button', { name: 'I already have an account' }).click();
+await p.getByLabel('Email').fill('rooted.demo.parent@gmail.com');
+await p.getByLabel('Password').fill('Rooted2026!');
+await p.getByRole('button', { name: 'Sign in', exact: true }).click();
+await p.getByText(/^Good (morning|afternoon|evening)$/).waitFor({ timeout: 25000 });
+out.home = true;
+await p.getByText(/Tonight with Ava|Another one for Ava/).waitFor();
+out.starterForAva = true;
+await p.screenshot({ path: 'docs/walkthrough/screens/live-home.png' });
+await p.getByRole('tab', { name: 'Week' }).click();
+await p.getByText('Math test').first().waitFor();
+out.week = true;
+await p.screenshot({ path: 'docs/walkthrough/screens/live-week.png' });
+await p.getByRole('tab', { name: 'Grow' }).click();
+await p.getByText('Sunday check-in').waitFor();
+out.grow = true;
+console.log(JSON.stringify(out));
+await b.close();
