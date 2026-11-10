@@ -20,6 +20,16 @@ Both install as a phone app from Safari (Share → Add to Home Screen) or Chrome
 3. **After the talk** (I asked it): four seeds from “Not tonight” to “We really talked”, where you were, and an optional note that **stays on the device**.
 4. **Next week**: questions this kid rated “Not tonight” sink; ones that landed rise; anything asked in the last ten days is skipped.
 
+## Pilot features (shipped 10 Nov)
+
+- **Second move.** After a talk that landed, one follow-up question and a listening tip for its topic. "Wrong moment" is a fifth outcome and never counts against anyone.
+- **Smart-timing nudge.** Family → Reminder: pick pickup, after school, dinner or bedtime. A web push with the kid's name and the event, never the question. `send-nudges` edge function, hourly `pg_cron`, VAPID keys in Vault.
+- **Import the week.** Paste a newsletter (local parser), snap a photo (Claude Opus 5.5 through the `extract-events` edge function), or paste a calendar link (ICS). Approve every row. "Repeats weekly" on the event form adds eight weeks.
+- **The experiment.** Pilot mode alternates event-specific and generic starters per family per day. Every starter shown is an impression; every talk carries its arm. `prompt_stats` view and `npm run export:prompt-stats`.
+- **Forgot password** via Supabase's recovery email and `/reset-password`.
+- **Founding-family pilot** offer on Grow with interest capture (`EXPO_PUBLIC_CHECKOUT_URL` turns it into a checkout link).
+- **Desktop layout:** sidebar and two columns above 1180px, stacked below, single column with the floating tab bar on phones.
+
 ## Product principles, enforced in code
 
 | Principle | Where |
@@ -47,15 +57,15 @@ Real backend: set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHAB
 
 ## Backend (Supabase)
 
-`supabase/migrations/20261110000000_rooted.sql` is the whole backend: `parents`, `kids`, `events`, `talks`, `week_reviews`, `audit_log`. Every row carries `parent_id` (defaulted to `auth.uid()`), and every policy is `parent_id = auth.uid()`. A trigger creates the parent row on sign-up; `delete_my_account()` removes everything. Sign-in is email + password; Supabase “Confirm email” stays OFF (no mail provider yet).
+`supabase/migrations/` is the whole backend: `parents`, `kids`, `events`, `talks`, `week_reviews`, `audit_log`, and from v2 `push_subscriptions`, `impressions`, `pilot_interest`, the `prompt_stats` view and the nudge functions. Edge functions: `extract-events` (Claude) and `send-nudges` (web push). Every row carries `parent_id` (defaulted to `auth.uid()`), and every policy is `parent_id = auth.uid()`. A trigger creates the parent row on sign-up; `delete_my_account()` removes everything. Sign-in is email + password; Supabase “Confirm email” stays OFF (no mail provider yet).
 
-Database rule tests (`npm run test:db`, 7 tests on Postgres 17 in CI) run the migration and hit it as two parents and anonymous: isolation, cascade deletes, audit, anon gets nothing.
+Database rule tests (`npm run test:db`, 11 tests on Postgres 17 in CI) run the migration and hit it as two parents and anonymous: isolation, cascade deletes, audit, anon gets nothing.
 
 ## Testing and CI
 
-- **Unit (Jest, 16 tests):** library rules (open questions, under 15 words, every kind covered before and after), suggestion ranking, counting rules, ownership checks in writes, logger redaction.
-- **Database (7 tests):** see above.
-- **End-to-end (Playwright, 32 runs):** iPhone 14, Pixel 7 and desktop Chrome against the production build: the core loop, the week, Sunday check-in, a new parent from zero, PWA install metadata, offline launch, security headers, audit log, zero console errors.
+- **Unit (Jest, 26 tests):** library rules (open questions, under 15 words, every kind covered before and after), suggestion ranking and experiment arms, counting rules, import parsing, ownership checks in writes, logger redaction.
+- **Database (11 tests):** see above, plus the v2 tables (impressions, push subscriptions, pilot interest, nudge targets).
+- **End-to-end (Playwright, 46 runs):** iPhone 14, Pixel 7 and desktop Chrome against the production build: the core loop, second move, import, repeat weekly, reminders and pilot mode, the pilot offer, password reset entry, the week, Sunday check-in, a new parent from zero, PWA install metadata, offline launch, security headers, audit log, zero console errors.
 - **CI:** `.github/workflows/ci.yml` on every push to `main`: typecheck, lint, unit, database rules, e2e, iOS + Android bundle.
 - **Live smoke:** `node scripts/smoke/live.mjs` runs the loop against the real project with throwaway accounts and checks a second parent sees nothing.
 
@@ -63,6 +73,10 @@ Database rule tests (`npm run test:db`, 7 tests on Postgres 17 in CI) run the mi
 
 `src/observability/`: structured JSON logs with redaction (keys like `note`, `name`, `question` content never reach a sink), audit events for every write, error boundary, metrics, `/diagnostics` screen, optional HTTP sink via `EXPO_PUBLIC_LOG_ENDPOINT`.
 
+## Working on it
+
+`AGENTS.md` is the working agreement; `docs/HARNESS.md` is the brief template and definition of done; `npm run harness` is the gate. `docs/roadmap.md` has Now / Next / Later.
+
 ## Not in this build
 
-Smart-timing notifications, AI learning beyond the ranking rules above, the growing family tree, badges, community prompts, parent groups, calendar sync, topic packs, co-parent sharing, payments, app-store builds, password reset (needs a mail provider).
+Full OAuth calendar sync (ICS links work), AI phrasing of questions, the growing family tree, badges, community prompts, parent groups, topic packs, co-parent sharing, Stripe checkout (the offer captures interest and opens a link if configured), app-store builds, native push.

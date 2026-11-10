@@ -74,7 +74,8 @@
   "build": {
     "env": {
       "EXPO_PUBLIC_SUPABASE_URL": "https://vpfwybfgiqiiimzayydj.supabase.co",
-      "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pifu58uviprpJYi3Frd0Rw_bvj_Ar2Q"
+      "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_pifu58uviprpJYi3Frd0Rw_bvj_Ar2Q",
+      "EXPO_PUBLIC_VAPID_PUBLIC_KEY": "BPnqNSw5RLOsf9qf4J20TGEcvz1dNb3R5a2EEgbW4USQyKEvJRKTrcrqfDtuYkYsVMw9fdyRjK25HN67Mc5-YaQ"
     }
   }
 }

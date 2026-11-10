@@ -56,7 +56,12 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run test:db",
     "deploy:pages": "node scripts/deploy-gh-pages.mjs",
     "test:db": "jest --config jest.db.config.js",
-    "db:local": "bash scripts/db-local.sh"
+    "db:local": "bash scripts/db-local.sh",
+    "harness": "node scripts/harness.mjs",
+    "harness:quick": "node scripts/harness.mjs --quick",
+    "smoke:live": "node scripts/smoke/live.mjs",
+    "export:prompt-stats": "node scripts/export-prompt-stats.mjs",
+    "qr": "node scripts/make-qr.mjs"
   },
   "private": true,
   "jest": {

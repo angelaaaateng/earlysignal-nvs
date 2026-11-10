@@ -14,9 +14,9 @@ export interface EventCandidate {
 }
 
 const KIND_WORDS: [RegExp, EventKind][] = [
-  [/\b(test|quiz|exam|midterm|final|assessment)\b/i, 'test'],
-  [/\b(tryout|try-out|audition|callbacks?)\b/i, 'tryout'],
-  [/\b(game|match|meet|tournament|scrimmage|race)\b/i, 'game'],
+  [/\b(tests?|quiz(zes)?|exams?|midterms?|finals?|assessments?)\b/i, 'test'],
+  [/\b(tryouts?|try-outs?|auditions?|callbacks?)\b/i, 'tryout'],
+  [/\b(games?|match(es)?|meets?|tournaments?|scrimmages?|races?)\b/i, 'game'],
   [/\b(concert|recital|performance|show|play|musical|opening night)\b/i, 'performance'],
   [/\b(presentation|present|speech|demo day|showcase|science fair)\b/i, 'presentation'],
   [/\b(project|essay|paper|report|lab|portfolio)\b.*\b(due)\b|\bdue\b.*\b(project|essay|paper|report|lab)\b/i, 'project'],
@@ -67,7 +67,7 @@ export function findDate(line: string, today: DateKey): DateKey | undefined {
 /** One candidate per line that has both a date and some words. */
 export function parseText(text: string, today: DateKey): EventCandidate[] {
   const out: EventCandidate[] = [];
-  for (const raw of text.split(/\n|•|;|\. (?=[A-Z])/)) {
+  for (const raw of text.split(/\n|•|;/)) {
     const line = raw.replace(/\s+/g, ' ').trim();
     if (line.length < 4) continue;
     const date = findDate(line, today);

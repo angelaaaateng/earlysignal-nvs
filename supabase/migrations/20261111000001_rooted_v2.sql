@@ -1,8 +1,6 @@
--- Rooted v2: the pilot features. Second move ("wrong moment" outcome), smart-timing
+-- Rooted v2, part 2: the pilot features. Second move ("wrong moment" outcome), smart-timing
 -- nudges (web push), the in-app experiment (impressions + arms), the founding-family
 -- offer, and a prompt-stats view. Everything stays per-parent under RLS.
-
-alter type public.talk_outcome add value if not exists 'wrong_moment';
 
 -- Nudge settings and pilot mode live on the parent.
 alter table public.parents
@@ -122,3 +120,19 @@ language sql security definer set search_path = '' as $$
   delete from public.push_subscriptions where endpoint = any (p_endpoints)
 $$;
 revoke execute on function public.drop_push_subscriptions(text[]) from public, anon, authenticated;
+
+-- The nudge sender reads its keys through this function (PostgREST does not expose
+-- the vault schema). Service role only; on a plain Postgres without Vault it returns nothing.
+create or replace function public.nudge_secrets() returns table (name text, value text)
+language plpgsql security definer set search_path = '' as $$
+begin
+  if to_regclass('vault.decrypted_secrets') is null then return; end if;
+  return query execute 'select name::text, decrypted_secret::text from vault.decrypted_secrets where name in (''vapid_public'', ''vapid_private'', ''cron_secret'')';
+end $$;
+revoke execute on function public.nudge_secrets() from public, anon, authenticated;
+
+-- The sender runs as the service role.
+grant execute on function public.nudge_secrets() to service_role;
+grant execute on function public.nudge_targets() to service_role;
+grant execute on function public.mark_nudged(uuid[]) to service_role;
+grant execute on function public.drop_push_subscriptions(text[]) to service_role;

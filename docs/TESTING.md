@@ -34,6 +34,16 @@ All passwords are `Rooted2026!`. Sign in with **I already have an account**. Eac
 
 These are placeholder addresses, not real inboxes. Nothing is ever emailed.
 
+## New this week (try these)
+
+1. **Second move.** Tap **I asked it**, pick *Good talk*: a follow-up question and a listening tip appear. Pick *Wrong moment*: nothing is counted.
+2. **Import the week.** Week → **Import** → paste a few lines like `Math test Thursday` and `Band concert Nov 20` → **Find events** → untick what you don't want → Add. Photo import needs the Claude key on the real app; calendar links work with any public .ics address.
+3. **Repeats weekly.** Week → **Add** → tick *Repeats weekly*: eight weeks land at once.
+4. **Reminder.** Family → **Reminder** on, pick a time. On the real app in Chrome or the installed app, allow notifications; a push arrives at that hour with your kid's name and the event.
+5. **Pilot mode.** Family → **Pilot mode** alternates event and general questions by day; Grow shows the running tally.
+6. **Founding-family pilot.** Grow → the lime card → **Count me in**.
+7. **Forgot password.** Sign in → *Forgot your password?* (real app only; the demo has no email).
+
 ## What to look for
 
 - The question is about *this week’s* event, before it and after it, and it names the event.
@@ -43,4 +53,4 @@ These are placeholder addresses, not real inboxes. Nothing is ever emailed.
 
 ## Not built yet
 
-Notifications, calendar sync, parent groups, the growing tree, badges, payments, app-store builds, password reset.
+Full calendar OAuth sync, parent groups, the growing tree, badges, Stripe checkout, app-store builds, native push.

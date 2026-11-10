@@ -14,18 +14,18 @@ Shipped: parent accounts, kid profiles, schedule input, three reviewed questions
 
 Biggest product risks, in order: (1) schedule entry is a chore, (2) the parent forgets at pickup, (3) the question lands but the parent lectures, (4) nothing to show for the effort after week two, (5) willingness to pay is untested.
 
-## Now (pilot, weeks 1–12)
+## Now (pilot, weeks 1–12) — status 10 Nov: shipped, except where marked
 
 | Feature | Risk it removes | Design notes | Measure |
 |---|---|---|---|
-| **Smart-timing nudge** (one per day, parent-set window: pickup, dinner, bedtime) | Forgetting | Web push + native push. Quiet by default; the nudge *is* the question, so the parent never opens the app to see it. Learns the hour "I asked it" gets tapped. | Nudge → "I asked it" within 3 hours |
-| **Second move** (after the kid answers) | Lecturing | One follow-up per starter ("What was that like for you?") plus the listening tip from the evidence brief. "Wrong moment" as an outcome, so a kid choosing privacy is not a failed talk. | Share of talks rated Good or better |
-| **Photo-to-schedule** | Schedule entry | Snap the syllabus, team schedule or school newsletter; Claude extracts events for approval. Also: recurring activities (soccer Tue/Thu) become events automatically. | Events per family per week; Sunday completion rate |
-| **Calendar import (ICS)** | Schedule entry | Paste a Google/Apple/school calendar link; events appear for approval. Full OAuth sync is Next. | Same |
-| **In-app experiment** | Our own bet | Within each family, alternate event-specific and generic prompts on comparable moments (evidence brief §83). Log delivered vs confirmed-asked. | Event-specific vs generic ask rate |
-| **Password reset + email verification** | Lockouts | Resend, transactional only. Unblocks magic links later. | Support tickets |
-| **Founding-family pilot checkout** ($59) | Payment unknown | Stripe Checkout on web; a real paid offer, not a survey. | Accept / offered |
-| **Feedback loop to the team** | Library quality | Weekly export: which prompts were shown, asked, rated; which were skipped with "Try another". The team edits the library from data. | Prompt skip rate |
+| **Smart-timing nudge** ✅ (one per day, parent-set window: pickup, dinner, bedtime) | Forgetting | Web push + native push. Quiet by default; the nudge *is* the question, so the parent never opens the app to see it. Learns the hour "I asked it" gets tapped. | Nudge → "I asked it" within 3 hours |
+| **Second move** ✅ (after the kid answers) | Lecturing | One follow-up per starter ("What was that like for you?") plus the listening tip from the evidence brief. "Wrong moment" as an outcome, so a kid choosing privacy is not a failed talk. | Share of talks rated Good or better |
+| **Photo-to-schedule** ✅ (needs the Claude key in edge-function secrets) | Schedule entry | Snap the syllabus, team schedule or school newsletter; Claude extracts events for approval. Also: recurring activities (soccer Tue/Thu) become events automatically. | Events per family per week; Sunday completion rate |
+| **Calendar import (ICS)** ✅ | Schedule entry | Paste a Google/Apple/school calendar link; events appear for approval. Full OAuth sync is Next. | Same |
+| **In-app experiment** ✅ | Our own bet | Within each family, alternate event-specific and generic prompts on comparable moments (evidence brief §83). Log delivered vs confirmed-asked. | Event-specific vs generic ask rate |
+| **Password reset** ✅ (Supabase mailer; verification still off) | Lockouts | Resend, transactional only. Unblocks magic links later. | Support tickets |
+| **Founding-family pilot offer** ✅ interest capture; Stripe link via env ($59) | Payment unknown | Stripe Checkout on web; a real paid offer, not a survey. | Accept / offered |
+| **Feedback loop to the team** ✅ `prompt_stats` + export script | Library quality | Weekly export: which prompts were shown, asked, rated; which were skipped with "Try another". The team edits the library from data. | Prompt skip rate |
 
 ## Next (MLP, Q2 2027): will parents love it and pay?
 
@@ -67,3 +67,13 @@ Biggest product risks, in order: (1) schedule entry is a chore, (2) the parent f
 ## What I would not build
 
 A teen app or any child account. Location or message monitoring. Leaderboards between parents. An AI that invents questions without a reviewed template. Streak-break notifications. Recording the child.
+
+## What I would build next, in order (after the pilot starts)
+
+1. **Native push and widgets** (EAS build, iOS/Android): the nudge is the product's heartbeat and web push is weakest on iPhone.
+2. **Full calendar sync** (Google/Apple OAuth) once ICS import shows parents want it.
+3. **Response-tips mode**: "They answered" → a 30-second coached follow-up, extending the second move.
+4. **Growing family tree + monthly card**: the emotional payoff before week-4 retention is measured.
+5. **AI phrasing inside guardrails**: Claude rewrites a reviewed question to the kid's interests; every variant logged.
+6. **Stripe checkout** on the founding-family offer once interviews settle the price.
+7. **Evening theme** (the design system's dark mode).
